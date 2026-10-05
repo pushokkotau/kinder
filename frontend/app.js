@@ -43,6 +43,7 @@ async function loadRecommendations() {
   const data = await api("/recommendations");
   state.recommendations = data.recommendations || [];
   state.index = 0;
+  $("autoSwipeButton").classList.remove("hidden");
   render();
 }
 
@@ -51,6 +52,7 @@ function render() {
   if (!profile) {
     $("profileCard").classList.add("hidden");
     $("emptyState").classList.remove("hidden");
+    $("autoSwipeButton").classList.add("hidden");
     $("status").textContent = "Подборка завершена";
     return;
   }
@@ -153,6 +155,7 @@ async function runAutoSwipe() {
     const result = await api("/autoswipe", { method: "POST" });
     $("profileCard").classList.add("hidden");
     $("emptyState").classList.remove("hidden");
+    $("autoSwipeButton").classList.add("hidden");
     $("emptyState").querySelector("h2").textContent = "AutoSwipe завершён ♥";
     $("swipeResultText").textContent = `Свайпов: ${result.swipes} · Лайков: ${result.likes} · Дизлайков: ${result.dislikes} · Новых матчей: +${result.new_matches} · Всего: ${result.matches_after}`;
     $("status").textContent = "Готово";
@@ -166,16 +169,6 @@ function openCityDialog() {
   $("customCity").value = "";
   initCities();
   $("cityDialog").showModal();
-}
-
-function logout(showToast = true) {
-  state.token = "";
-  localStorage.removeItem("kinder_session_token");
-  $("appScreen").classList.add("hidden");
-  $("authScreen").classList.remove("hidden");
-  $("authChoice").classList.remove("hidden");
-  ["tokenForm", "phoneForm", "codeForm"].forEach(id => $(id).classList.add("hidden"));
-  if (showToast) toast("Вы вышли из аккаунта");
 }
 
 function showApp() {
@@ -236,5 +229,6 @@ document.addEventListener("keydown", (event) => {
 });
 $("cityButton").addEventListener("click", openCityDialog);
 $("changeCityButton").addEventListener("click", openCityDialog);
+$("autoSwipeButton").addEventListener("click", runAutoSwipe);
 $("applyCityButton").addEventListener("click", (event) => { event.preventDefault(); applyCity(); });
 init();
