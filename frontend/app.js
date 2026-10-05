@@ -35,6 +35,7 @@ function renderScreen() {
     case "city": return cityScreen();
     case "mode": return modeScreen();
     case "swipe": return swipeScreen();
+    case "editCity": return cityEditScreen();
     case "auto": return autoScreen();
     case "result": return resultScreen();
     case "matches": return matchesScreen();
