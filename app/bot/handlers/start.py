@@ -1,16 +1,16 @@
-from aiogram import Dispatcher, types
-from aiogram.dispatcher import FSMContext
+from aiogram import Router
+from aiogram.filters import Command, StateFilter
+from aiogram.types import Message
 
 from app.bot.keyboards import start_keyboard
 
 
-async def start(message: types.Message, state: FSMContext) -> None:
-    await state.finish()
+router = Router()
+
+
+@router.message(Command("start"), StateFilter("*"))
+async def start(message: Message) -> None:
     await message.answer(
         "Привет! Для работы бота сначала авторизуй Tinder.",
         reply_markup=start_keyboard(),
     )
-
-
-def register(dp: Dispatcher) -> None:
-    dp.register_message_handler(start, commands=["start"], state="*")
