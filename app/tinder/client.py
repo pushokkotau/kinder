@@ -1,5 +1,5 @@
 import re
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import requests
 
@@ -78,8 +78,6 @@ class TinderClient:
             "POST", f"/v3/auth/login?locale={self.locale}", data=payload
         )
 
-        # The legacy endpoint returns a protobuf-like payload. Parse bytes rather
-        # than response.text so decoding cannot corrupt the token or delimiters.
         match = re.search(rb"\x12\$(.*?)\x22\x18", response.content, re.DOTALL)
         if not match:
             raise TinderAPIError(
@@ -115,14 +113,10 @@ class TinderClient:
         self._request(
             "POST",
             f"/v2/meta?locale={self.locale}",
-            json={
-                "lat": latitude,
-                "lon": longitude,
-                "force_fetch_resources": True,
-            },
+            json={"lat": latitude, "lon": longitude, "force_fetch_resources": True},
         )
 
-    def get_recommendations(self) -> list[Recommendation]:
+    def get_recommendations(self) -> List[Recommendation]:
         data = self._request(
             "GET", f"/v2/recs/core?locale={self.locale}"
         ).json().get("data", {})
@@ -147,12 +141,9 @@ class TinderClient:
         return recommendations
 
     def like(self, user_id: str) -> None:
-        # Current third-party API wrappers document POST for /like/{id}.
         self._request("POST", f"/like/{user_id}?locale={self.locale}")
 
     def dislike(self, user_id: str, s_number: Optional[int] = None) -> None:
-        # Keep s_number from the recommendation when available, but use POST
-        # for the swipe action as documented by newer wrappers.
         path = f"/pass/{user_id}?locale={self.locale}"
         if s_number is not None:
             path += f"&s_number={s_number}"
@@ -161,7 +152,7 @@ class TinderClient:
     def get_matches_count(self) -> int:
         return len(self._get_all_matches())
 
-    def _get_all_matches(self) -> list[Dict[str, Any]]:
+    def _get_all_matches(self) -> List[Dict[str, Any]]:
         matches = []
         page_token = None
         while True:
