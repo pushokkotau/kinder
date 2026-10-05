@@ -146,21 +146,30 @@ function showAuthForm(id) {
 }
 $("tokenAuthButton").addEventListener("click", () => showAuthForm("tokenForm"));
 $("phoneAuthButton").addEventListener("click", () => showAuthForm("phoneForm"));
-$("tokenForm").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  try { await authenticateToken($("tokenInput").value.trim()); showApp(); await init(); }
+async function handleTokenAuth() {
+  const token = $("tokenInput").value.trim();
+  if (!token) { toast("Введите Tinder token"); $("tokenInput").focus(); return; }
+  try { await authenticateToken(token); showApp(); await init(); }
   catch (error) { toast(error.message); }
-});
-$("phoneForm").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  try { await requestPhone($("phoneInput").value.trim()); showAuthForm("codeForm"); }
+}
+async function handlePhoneAuth() {
+  const phone = $("phoneInput").value.trim();
+  if (!phone) { toast("Введите номер телефона"); $("phoneInput").focus(); return; }
+  try { await requestPhone(phone); showAuthForm("codeForm"); }
   catch (error) { toast(error.message); }
-});
-$("codeForm").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  try { await verifyPhone($("codeInput").value.trim()); showApp(); await init(); }
+}
+async function handleCodeAuth() {
+  const code = $("codeInput").value.trim();
+  if (!code) { toast("Введите код"); $("codeInput").focus(); return; }
+  try { await verifyPhone(code); showApp(); await init(); }
   catch (error) { toast(error.message); }
-});
+}
+$("tokenForm").addEventListener("submit", (event) => { event.preventDefault(); handleTokenAuth(); });
+$("phoneForm").addEventListener("submit", (event) => { event.preventDefault(); handlePhoneAuth(); });
+$("codeForm").addEventListener("submit", (event) => { event.preventDefault(); handleCodeAuth(); });
+$("tokenForm").querySelector("button[type=submit]").addEventListener("click", (event) => { event.preventDefault(); handleTokenAuth(); });
+$("phoneForm").querySelector("button[type=submit]").addEventListener("click", (event) => { event.preventDefault(); handlePhoneAuth(); });
+$("codeForm").querySelector("button[type=submit]").addEventListener("click", (event) => { event.preventDefault(); handleCodeAuth(); });
 async function init() {
   if (!requireAuth()) return;
   try {
