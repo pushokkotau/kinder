@@ -38,7 +38,18 @@ class AutoSwipeService:
         first_batch = self.recommendations.get_batch()
         before = self.matches.snapshot()
 
-        swipe_result = self.swipes.run(first_batch)
+        # Do not ask the recommendation API for the same empty batch again.
+        if not first_batch:
+            swipe_result = SwipeResult(
+                swipes=0,
+                likes=0,
+                dislikes=0,
+                limit_reached=False,
+                recommendations_exhausted=True,
+            )
+        else:
+            swipe_result = self.swipes.run(first_batch)
+
         after = self.matches.snapshot()
         match_stats = self.matches.calculate(before, after)
 
