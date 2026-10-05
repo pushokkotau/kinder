@@ -1,5 +1,5 @@
 const API_BASE = window.KINDER_API_BASE || "http://localhost:8000/api/v1";
-const state = { token: localStorage.getItem("kinder_session_token"), city: "", recommendations: [], index: 0 };
+const state = { token: localStorage.getItem("kinder_session_token"), city: "", selectedCity: "", recommendations: [], index: 0, photoIndex: 0, beforeMatches: 0 };
 
 const $ = (id) => document.getElementById(id);
 function toast(message) { $("toast").textContent = message; $("toast").classList.add("show"); clearTimeout(toast.timer); toast.timer = setTimeout(() => $("toast").classList.remove("show"), 1600); }
@@ -10,7 +10,7 @@ async function api(path, options = {}) {
   const response = await fetch(API_BASE + path, { ...options, headers });
   let data = {};
   try { data = await response.json(); } catch (_) {}
-  if (!response.ok) throw new Error(data.detail || `API error: ${response.status}`);
+  if (response.status === 401) { logout(false); throw new Error("Сессия истекла. Войдите снова."); }\n  if (!response.ok) throw new Error(data.detail || `API error: ${response.status}`);
   return data;
 }
 
@@ -54,14 +54,14 @@ function render() {
   }
   $("emptyState").classList.add("hidden");
   $("profileCard").classList.remove("hidden");
-  $("profilePhoto").src = profile.photos?.[0]?.url || profile.photos?.[0] || "";
+  state.photoIndex = 0;\n  $("profilePhoto").src = profile.photos?.[0]?.url || profile.photos?.[0] || "";\n  $("profilePhoto").onerror = () => { $("profilePhoto").removeAttribute("src"); $("profilePhoto").classList.add("photo-placeholder"); };
   $("profileName").textContent = profile.name || "Без имени";
   $("profileAge").textContent = "";
   $("profileMeta").textContent = state.city;
   $("profileBio").textContent = "";
   $("status").textContent = "Новая рекомендация";
   $("matchesCount").textContent = $("matchesCount").textContent || "0";
-  $("photoDots").innerHTML = (profile.photos || []).map((_, i) => `<i class="${i === 0 ? "active" : ""}"></i>`).join("");
+  $("photoDots").innerHTML = (profile.photos || []).map((_, i) => `<i class="${i === 0 ? "active" : ""}" data-photo-index="${i}"></i>`).join("");\n  document.querySelectorAll("#photoDots i").forEach(dot => dot.addEventListener("click", () => showPhoto(Number(dot.dataset.photoIndex))));
 }
 
 async function swipe(action) {
@@ -81,7 +81,7 @@ async function finishManualSwiping() {
     await loadMatches();
     $("status").textContent = "Свайпинг завершён";
     $("emptyState").querySelector("h2").textContent = "Свайпинг завершён ♥";
-    $("emptyState").querySelector("p").textContent = `Всего матчей: ${$("matchesCount").textContent}`;
+    $("emptyState").querySelector("p").textContent = `Новых матчей: +${newMatches} · Всего матчей: ${afterMatches}`;
   } catch (error) {
     toast(error.message);
   }
@@ -126,7 +126,7 @@ async function verifyPhone(code) {
   state.token = data.session_token;
   localStorage.setItem("kinder_session_token", state.token);
 }
-function showApp() {
+function logout(showToast = true) {\n  state.token = "";\n  localStorage.removeItem("kinder_session_token");\n  $("appScreen").classList.add("hidden");\n  $("authScreen").classList.remove("hidden");\n  $("authChoice").classList.remove("hidden");\n  ["tokenForm", "phoneForm", "codeForm"].forEach(id => $(id).classList.add("hidden"));\n  if (showToast) toast("Вы вышли из аккаунта");\n}\n\nfunction showApp() {
   $("authScreen").classList.add("hidden");
   $("appScreen").classList.remove("hidden");
 }
@@ -165,11 +165,11 @@ async function init() {
 
 $("likeButton").addEventListener("click", () => swipe("like"));
 $("dislikeButton").addEventListener("click", () => swipe("dislike"));
-document.addEventListener("keydown", (event) => {
+$("profilePhoto").addEventListener("click", () => {\n  const photos = state.recommendations[state.index]?.photos || [];\n  if (photos.length > 1) showPhoto((state.photoIndex + 1) % photos.length);\n});\ndocument.addEventListener("keydown", (event) => {
   if (event.key === "ArrowLeft") swipe("dislike");
   if (event.key === "ArrowRight") swipe("like");
 });
-$("cityButton").addEventListener("click", () => { state.selectedCity = state.city; $("customCity").value = ""; initCities(); $("cityDialog").showModal(); });
-$("changeCityButton").addEventListener("click", () => { state.selectedCity = state.city; $("customCity").value = ""; initCities(); $("cityDialog").showModal(); });
+$("cityButton").addEventListener("click", openCityDialog);
+$("changeCityButton").addEventListener("click", openCityDialog);
 $("applyCityButton").addEventListener("click", (event) => { event.preventDefault(); applyCity(); });
 init();
