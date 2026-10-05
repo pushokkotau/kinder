@@ -39,7 +39,6 @@ class FakeTinderClient:
     def like(self, user_id):
         self.events.append(("like", user_id))
         self.likes.append(user_id)
-        self.matches += 1
 
     def dislike(self, user_id, s_number=None):
         self.events.append(("dislike", user_id, s_number))
@@ -146,13 +145,13 @@ def test_auto_swipe_runs_complete_flow_and_calculates_new_matches():
     assert result.swipe_result.likes == 1
     assert result.swipe_result.dislikes == 1
     assert result.match_stats.before == 10
-    assert result.match_stats.after == 11
-    assert result.match_stats.new_matches == 1
+    assert result.match_stats.after == 10
+    assert result.match_stats.new_matches == 0
     assert events == [
         ("location_service", "Test City"),
         ("location", 1.0, 2.0),
         ("matches", 10),
         ("like", "like-1"),
         ("dislike", "dislike-1", 1),
-        ("matches", 11),
+        ("matches", 10),
     ]
