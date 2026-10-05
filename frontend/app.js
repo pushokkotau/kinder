@@ -247,12 +247,15 @@ $("profilePhoto").addEventListener("click", () => {
   if (photos.length > 1) showPhoto((state.photoIndex + 1) % photos.length);
 });
 document.addEventListener("keydown", (event) => {
-  if (event.key === "ArrowLeft") changePhoto(-1);
-  if (event.key === "ArrowRight") changePhoto(1);
+  if (event.key === "ArrowLeft") swipe("dislike");
+  if (event.key === "ArrowRight") swipe("like");
 });
 $("profilePhoto").addEventListener("click", (event) => {
   const rect = $("profilePhoto").getBoundingClientRect();
-  changePhoto(event.clientX < rect.left + rect.width / 2 ? -1 : 1);
+  const photos = state.recommendations[state.index]?.photos || [];
+  if (photos.length < 2) return;
+  const direction = event.clientX < rect.left + rect.width / 2 ? -1 : 1;
+  showPhoto((state.photoIndex + direction + photos.length) % photos.length);
 });
 $("cityButton").addEventListener("click", openCityDialog);
 $("changeCityButton").addEventListener("click", openCityDialog);
