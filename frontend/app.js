@@ -52,6 +52,7 @@ function render() {
   if (!profile) {
     $("profileCard").classList.add("hidden");
     $("actions").classList.add("hidden");
+    $("swipeHint").classList.add("hidden");
     $("emptyState").classList.remove("hidden");
     $("autoSwipeButton").classList.add("hidden");
     $("status").textContent = "Подборка завершена";
@@ -60,6 +61,7 @@ function render() {
   $("emptyState").classList.add("hidden");
   $("profileCard").classList.remove("hidden");
   $("actions").classList.remove("hidden");
+  $("swipeHint").classList.remove("hidden");
   state.photoIndex = 0;
   $("profilePhoto").classList.remove("photo-placeholder");
   $("profilePhoto").src = profile.photos?.[0]?.url || profile.photos?.[0] || "";
@@ -108,6 +110,9 @@ async function finishManualSwiping() {
   try {
     const afterMatches = await loadMatches();
     const newMatches = Math.max(0, afterMatches - state.beforeMatches);
+    $("actions").classList.add("hidden");
+    $("swipeHint").classList.add("hidden");
+    $("autoSwipeButton").classList.add("hidden");
     $("status").textContent = "Свайпинг завершён";
     $("emptyState").querySelector("h2").textContent = "Свайпинг завершён ♥";
     $("swipeResultText").textContent = `Новых матчей: +${newMatches} · Всего матчей: ${afterMatches}`;
@@ -130,6 +135,11 @@ async function applyCity() {
     $("emptyState").classList.add("hidden");
     $("profileCard").classList.remove("hidden");
     $("actions").classList.remove("hidden");
+    $("swipeHint").classList.remove("hidden");
+    $("autoSwipeButton").disabled = false;
+    $("autoSwipeButton").textContent = "🚀 AutoSwipe";
+    $("emptyState").querySelector("h2").textContent = "Рекомендации закончились";
+    $("swipeResultText").textContent = "Попробуй выбрать другой город.";
     state.beforeMatches = await loadMatches();
     toast(`Ищем анкеты в городе «${city}»`);
     await loadRecommendations();
@@ -242,10 +252,6 @@ async function init() {
 
 $("likeButton").addEventListener("click", () => swipe("like"));
 $("dislikeButton").addEventListener("click", () => swipe("dislike"));
-$("profilePhoto").addEventListener("click", (event) => {
-  const rect = $("profilePhoto").getBoundingClientRect();
-  changePhoto(event.clientX < rect.left + rect.width / 2 ? -1 : 1);
-});
 document.addEventListener("keydown", (event) => {
   if (event.key === "ArrowLeft") swipe("dislike");
   if (event.key === "ArrowRight") swipe("like");
