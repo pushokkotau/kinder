@@ -57,6 +57,7 @@ function render() {
   $("emptyState").classList.add("hidden");
   $("profileCard").classList.remove("hidden");
   state.photoIndex = 0;
+  $("profilePhoto").classList.remove("photo-placeholder");
   $("profilePhoto").src = profile.photos?.[0]?.url || profile.photos?.[0] || "";
   $("profilePhoto").onerror = () => { $("profilePhoto").removeAttribute("src"); $("profilePhoto").classList.add("photo-placeholder"); };
   $("profileName").textContent = profile.name || "Без имени";
