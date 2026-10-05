@@ -256,12 +256,13 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "ArrowLeft") swipe("dislike");
   if (event.key === "ArrowRight") swipe("like");
 });
-$("profilePhoto").addEventListener("click", (event) => {
-  const rect = $("profilePhoto").getBoundingClientRect();
+$("profileCard").addEventListener("click", (event) => {
+  if (event.target.closest("#photoDots")) return;
   const photos = state.recommendations[state.index]?.photos || [];
   if (photos.length < 2) return;
+  const rect = $("profileCard").getBoundingClientRect();
   const direction = event.clientX < rect.left + rect.width / 2 ? -1 : 1;
-  showPhoto((state.photoIndex + direction + photos.length) % photos.length);
+  changePhoto(direction);
 });
 $("cityButton").addEventListener("click", openCityDialog);
 $("changeCityButton").addEventListener("click", openCityDialog);
