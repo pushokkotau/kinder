@@ -1,5 +1,5 @@
 const API_BASE = window.KINDER_API_BASE || "http://localhost:8000/api/v1";
-const state = { token: localStorage.getItem("kinder_session_token"), city: "", selectedCity: "", recommendations: [], index: 0, photoIndex: 0, beforeMatches: 0 };
+const state = { token: localStorage.getItem("kinder_session_token"), city: "", selectedCity: "", recommendations: [], index: 0, photoIndex: 0, beforeMatches: 0, authBusy: false };
 
 const $ = (id) => document.getElementById(id);
 function toast(message) { $("toast").textContent = message; $("toast").classList.add("show"); clearTimeout(toast.timer); toast.timer = setTimeout(() => $("toast").classList.remove("show"), 1600); }
@@ -224,18 +224,57 @@ $("phoneAuthButton").addEventListener("click", () => showAuthForm("phoneForm"));
 $("logoutButton").addEventListener("click", () => logout());
 $("tokenForm").addEventListener("submit", async (event) => {
   event.preventDefault();
-  try { await authenticateToken($("tokenInput").value.trim()); await init(); }
-  catch (error) { toast(error.message); }
+  if (state.authBusy) return;
+  const button = event.currentTarget.querySelector("button[type=submit]");
+  state.authBusy = true;
+  button.disabled = true;
+  button.textContent = "Входим…";
+  try {
+    await authenticateToken($("tokenInput").value.trim());
+    await init();
+  } catch (error) {
+    toast(error.message);
+  } finally {
+    state.authBusy = false;
+    button.disabled = false;
+    button.textContent = "Войти";
+  }
 });
 $("phoneForm").addEventListener("submit", async (event) => {
   event.preventDefault();
-  try { await requestPhone($("phoneInput").value.trim()); showAuthForm("codeForm"); }
-  catch (error) { toast(error.message); }
+  if (state.authBusy) return;
+  const button = event.currentTarget.querySelector("button[type=submit]");
+  state.authBusy = true;
+  button.disabled = true;
+  button.textContent = "Отправляем…";
+  try {
+    await requestPhone($("phoneInput").value.trim());
+    showAuthForm("codeForm");
+  } catch (error) {
+    toast(error.message);
+  } finally {
+    state.authBusy = false;
+    button.disabled = false;
+    button.textContent = "Получить код";
+  }
 });
 $("codeForm").addEventListener("submit", async (event) => {
   event.preventDefault();
-  try { await verifyPhone($("codeInput").value.trim()); await init(); }
-  catch (error) { toast(error.message); }
+  if (state.authBusy) return;
+  const button = event.currentTarget.querySelector("button[type=submit]");
+  state.authBusy = true;
+  button.disabled = true;
+  button.textContent = "Проверяем…";
+  try {
+    await verifyPhone($("codeInput").value.trim());
+    await init();
+  } catch (error) {
+    toast(error.message);
+  } finally {
+    state.authBusy = false;
+    button.disabled = false;
+    button.textContent = "Подтвердить";
+  }
 });
 async function init() {
   if (!state.token) return;
