@@ -242,9 +242,9 @@ async function init() {
 
 $("likeButton").addEventListener("click", () => swipe("like"));
 $("dislikeButton").addEventListener("click", () => swipe("dislike"));
-$("profilePhoto").addEventListener("click", () => {
-  const photos = state.recommendations[state.index]?.photos || [];
-  if (photos.length > 1) showPhoto((state.photoIndex + 1) % photos.length);
+$("profilePhoto").addEventListener("click", (event) => {
+  const rect = $("profilePhoto").getBoundingClientRect();
+  changePhoto(event.clientX < rect.left + rect.width / 2 ? -1 : 1);
 });
 document.addEventListener("keydown", (event) => {
   if (event.key === "ArrowLeft") swipe("dislike");
