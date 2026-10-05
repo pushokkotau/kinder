@@ -78,7 +78,7 @@ def create_router(sessions: TinderSessionManager) -> Router:
         await message.answer(
             f"AutoSwipe завершён.\n\n"
             f"Город: {result.location.address or city}\n"
-            f"Получено рекомендаций в первой порции: {result.recommendations_received}\n"
+            f"Получено рекомендаций: {result.recommendations_received}\n"
             f"Свайпов выполнено: {swipe.swipes}\n"
             f"Лайков: {swipe.likes}\n"
             f"Дизлайков: {swipe.dislikes}\n"
