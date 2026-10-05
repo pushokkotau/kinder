@@ -6,7 +6,13 @@ from app.tinder.models import Recommendation, SwipeResult
 
 
 class SwipeService:
-    def __init__(self, tinder_client, recommendation_service, swipe_limit: int = SWIPE_LIMIT, delay_seconds: float = 0.0):
+    def __init__(
+        self,
+        tinder_client,
+        recommendation_service,
+        swipe_limit: int = SWIPE_LIMIT,
+        delay_seconds: float = 0.0,
+    ):
         self.client = tinder_client
         self.recommendations = recommendation_service
         self.swipe_limit = swipe_limit
@@ -14,6 +20,7 @@ class SwipeService:
 
     def run(self, first_batch: Iterable[Recommendation]) -> SwipeResult:
         swipes = likes = dislikes = 0
+        recommendations_received = 0
         seen: Set[str] = set()
         batch = list(first_batch)
         exhausted = False
@@ -21,9 +28,12 @@ class SwipeService:
         while swipes < self.swipe_limit:
             if not batch:
                 batch = self.recommendations.get_batch()
+                recommendations_received += len(batch)
                 if not batch:
                     exhausted = True
                     break
+            else:
+                recommendations_received += len(batch)
 
             for recommendation in batch:
                 if swipes >= self.swipe_limit:
@@ -51,4 +61,5 @@ class SwipeService:
             dislikes=dislikes,
             limit_reached=swipes >= self.swipe_limit,
             recommendations_exhausted=exhausted,
+            recommendations_received=recommendations_received,
         )
