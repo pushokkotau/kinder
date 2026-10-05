@@ -10,7 +10,7 @@ async function api(path, options = {}) {
   const response = await fetch(API_BASE + path, { ...options, headers });
   let data = {};
   try { data = await response.json(); } catch (_) {}
-  if (!response.ok) throw new Error(data.detail || `API error: ${response.status}`);
+  if (response.status === 401) {\n    state.token = "";\n    localStorage.removeItem("kinder_session_token");\n    $("appScreen").classList.add("hidden");\n    $("authScreen").classList.remove("hidden");\n    $("authChoice").classList.remove("hidden");\n    ["tokenForm", "phoneForm", "codeForm"].forEach((id) => $(id).classList.add("hidden"));\n    throw new Error(data.detail || "Сессия истекла. Войдите снова.");\n  }\n  if (!response.ok) throw new Error(data.detail || `API error: ${response.status}`);
   return data;
 }
 
