@@ -46,6 +46,7 @@ class AutoSwipeService:
                 dislikes=0,
                 limit_reached=False,
                 recommendations_exhausted=True,
+                recommendations_received=0,
             )
         else:
             swipe_result = self.swipes.run(first_batch)
@@ -56,6 +57,6 @@ class AutoSwipeService:
         return AutoSwipeResult(
             swipe_result=swipe_result,
             match_stats=match_stats,
-            recommendations_received=len(first_batch),
+            recommendations_received=swipe_result.recommendations_received,
             location=location,
         )
