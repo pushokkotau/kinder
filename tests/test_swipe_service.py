@@ -46,6 +46,7 @@ def test_two_or_more_photos_are_liked_and_single_photo_is_disliked():
     assert result.dislikes == 1
     assert result.recommendations_exhausted is True
     assert result.limit_reached is False
+    assert result.recommendations_received == 3
     assert client.likes == ["two", "three"]
     assert client.dislikes == [("one", 1)]
 
@@ -65,6 +66,7 @@ def test_swipe_limit_stops_processing_remaining_recommendations():
     assert result.dislikes == 1
     assert result.limit_reached is True
     assert result.recommendations_exhausted is False
+    assert result.recommendations_received == 3
 
 
 def test_duplicate_recommendations_are_swiped_only_once():
@@ -79,6 +81,7 @@ def test_duplicate_recommendations_are_swiped_only_once():
     assert result.swipes == 1
     assert result.likes == 1
     assert result.dislikes == 0
+    assert result.recommendations_received == 2
     assert client.likes == ["same"]
 
 
@@ -97,6 +100,7 @@ def test_service_fetches_next_batch_until_limit_or_exhaustion():
     assert result.dislikes == 2
     assert result.limit_reached is True
     assert result.recommendations_exhausted is False
+    assert result.recommendations_received == 3
     assert recommendations.calls == 2
 
 
@@ -109,6 +113,7 @@ def test_zero_swipe_limit_performs_no_swipes():
     assert result.swipes == 0
     assert result.likes == 0
     assert result.dislikes == 0
+    assert result.recommendations_received == 0
     assert result.limit_reached is True
     assert client.likes == []
     assert client.dislikes == []
@@ -122,6 +127,7 @@ def test_empty_next_batch_marks_recommendations_exhausted():
     result = service.run([recommendation("one", [{"url": "1"}])])
 
     assert result.swipes == 1
+    assert result.recommendations_received == 1
     assert result.recommendations_exhausted is True
     assert result.limit_reached is False
     assert recommendations.calls == 1
