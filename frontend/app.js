@@ -89,9 +89,6 @@ async function finishManualSwiping() {
     $("status").textContent = "Свайпинг завершён";
     $("emptyState").querySelector("h2").textContent = "Свайпинг завершён ♥";
     $("swipeResultText").textContent = `Новых матчей: +${newMatches} · Всего матчей: ${afterMatches}`;
-    $("autoSwipeButton").classList.remove("hidden");
-    $("autoSwipeButton").disabled = false;
-    $("autoSwipeButton").textContent = "Запустить AutoSwipe";
   } catch (error) {
     toast(error.message);
   }
@@ -160,8 +157,6 @@ async function runAutoSwipe() {
     $("swipeResultText").textContent = `Свайпов: ${result.swipes} · Лайков: ${result.likes} · Дизлайков: ${result.dislikes} · Новых матчей: +${result.new_matches} · Всего: ${result.matches_after}`;
     $("status").textContent = "Готово";
   } catch (error) {
-    $("autoSwipeButton").disabled = false;
-    $("autoSwipeButton").textContent = "Запустить AutoSwipe";
     toast(error.message);
   }
 }
@@ -195,7 +190,6 @@ function showAuthForm(id) {
 $("tokenAuthButton").addEventListener("click", () => showAuthForm("tokenForm"));
 $("phoneAuthButton").addEventListener("click", () => showAuthForm("phoneForm"));
 $("logoutButton").addEventListener("click", () => logout());
-$("autoSwipeButton").addEventListener("click", runAutoSwipe);
 $("tokenForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   try { await authenticateToken($("tokenInput").value.trim()); await init(); }
