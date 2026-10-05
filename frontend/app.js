@@ -88,7 +88,10 @@ async function finishManualSwiping() {
     const newMatches = Math.max(0, afterMatches - state.beforeMatches);
     $("status").textContent = "Свайпинг завершён";
     $("emptyState").querySelector("h2").textContent = "Свайпинг завершён ♥";
-    $("emptyState").querySelector("p").textContent = `Новых матчей: +${newMatches} · Всего матчей: ${afterMatches}`;
+    $("swipeResultText").textContent = `Новых матчей: +${newMatches} · Всего матчей: ${afterMatches}`;
+    $("autoSwipeButton").classList.remove("hidden");
+    $("autoSwipeButton").disabled = false;
+    $("autoSwipeButton").textContent = "Запустить AutoSwipe";
   } catch (error) {
     toast(error.message);
   }
@@ -145,6 +148,24 @@ function logout(showToast = true) {
   if (showToast) toast("Вы вышли из аккаунта");
 }
 
+async function runAutoSwipe() {
+  $("autoSwipeButton").disabled = true;
+  $("autoSwipeButton").textContent = "Свайпинг…";
+  $("status").textContent = "Запускаем AutoSwipe…";
+  try {
+    const result = await api("/autoswipe", { method: "POST" });
+    $("profileCard").classList.add("hidden");
+    $("emptyState").classList.remove("hidden");
+    $("emptyState").querySelector("h2").textContent = "AutoSwipe завершён ♥";
+    $("swipeResultText").textContent = `Свайпов: ${result.swipes} · Лайков: ${result.likes} · Дизлайков: ${result.dislikes} · Новых матчей: +${result.new_matches} · Всего: ${result.matches_after}`;
+    $("status").textContent = "Готово";
+  } catch (error) {
+    $("autoSwipeButton").disabled = false;
+    $("autoSwipeButton").textContent = "Запустить AutoSwipe";
+    toast(error.message);
+  }
+}
+
 function openCityDialog() {
   state.selectedCity = "";
   $("customCity").value = "";
@@ -174,6 +195,7 @@ function showAuthForm(id) {
 $("tokenAuthButton").addEventListener("click", () => showAuthForm("tokenForm"));
 $("phoneAuthButton").addEventListener("click", () => showAuthForm("phoneForm"));
 $("logoutButton").addEventListener("click", () => logout());
+$("autoSwipeButton").addEventListener("click", runAutoSwipe);
 $("tokenForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   try { await authenticateToken($("tokenInput").value.trim()); await init(); }
