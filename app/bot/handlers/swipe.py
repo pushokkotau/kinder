@@ -17,6 +17,12 @@ def create_router(sessions: TinderSessionManager) -> Router:
 
     @router.message(F.text == "Запустить AutoSwipe")
     async def swipe_start(message: Message, state: FSMContext):
+        try:
+            sessions.get_authenticated_client(message.from_user.id)
+        except Exception as exc:
+            await message.answer(f"Сначала авторизуй Tinder: {exc}")
+            return
+
         await state.set_state(MainStates.waiting_location)
         await message.answer("Напиши город, в котором нужно искать анкеты.")
 
@@ -31,16 +37,21 @@ def create_router(sessions: TinderSessionManager) -> Router:
             await message.answer("Город не должен быть пустым.")
             return
 
-        await state.set_state(MainStates.swiping)
-        client = sessions.get_client(message.from_user.id)
+        try:
+            client = sessions.get_authenticated_client(message.from_user.id)
+        except Exception as exc:
+            await state.clear()
+            await message.answer(f"Сначала авторизуй Tinder: {exc}")
+            return
 
+        await state.set_state(MainStates.swiping)
+
+        recommendation_service = RecommendationService(client)
         service = AutoSwipeService(
             location_service=LocationService(client),
-            recommendation_service=RecommendationService(client),
+            recommendation_service=recommendation_service,
             match_service=MatchService(client),
-            swipe_service=SwipeService(
-                client, RecommendationService(client)
-            ),
+            swipe_service=SwipeService(client, recommendation_service),
         )
 
         await message.answer("Запускаю AutoSwipe...")
@@ -67,7 +78,7 @@ def create_router(sessions: TinderSessionManager) -> Router:
         await message.answer(
             f"AutoSwipe завершён.\n\n"
             f"Город: {result.location.address or city}\n"
-            f"Получено рекомендаций в первой порции: {result.recommendations_received}\n"
+            f"Получено рекомендаций: {result.recommendations_received}\n"
             f"Свайпов выполнено: {swipe.swipes}\n"
             f"Лайков: {swipe.likes}\n"
             f"Дизлайков: {swipe.dislikes}\n"
