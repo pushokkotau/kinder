@@ -31,6 +31,7 @@ class SwipeResult:
     dislikes: int
     limit_reached: bool
     recommendations_exhausted: bool
+    recommendations_received: int
 
 
 @dataclass(frozen=True)
