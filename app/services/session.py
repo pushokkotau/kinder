@@ -1,6 +1,8 @@
+import os
 from typing import Dict
 
 from app.tinder.client import TinderClient
+from app.tinder.fake_client import FakeTinderClient
 
 
 class TinderSessionManager:
@@ -8,10 +10,14 @@ class TinderSessionManager:
 
     def __init__(self):
         self._clients: Dict[int, TinderClient] = {}
+        self._api_mode = os.getenv("TINDER_API_MODE", "fake").lower()
 
     def get_client(self, telegram_user_id: int) -> TinderClient:
         if telegram_user_id not in self._clients:
-            self._clients[telegram_user_id] = TinderClient()
+            if self._api_mode == "real":
+                self._clients[telegram_user_id] = TinderClient()
+            else:
+                self._clients[telegram_user_id] = FakeTinderClient()
         return self._clients[telegram_user_id]
 
     def remove(self, telegram_user_id: int) -> None:
