@@ -1,3 +1,5 @@
+import asyncio
+
 import phonenumbers
 
 from aiogram import F, Router
@@ -54,7 +56,7 @@ async def phone_received(
 
     auth, _ = _services(message, sessions)
     try:
-        auth.request_phone_code(phone)
+        await asyncio.to_thread(auth.request_phone_code, phone)
     except Exception as exc:
         await message.answer(f"Не удалось запросить код Tinder: {exc}")
         return
@@ -80,17 +82,17 @@ async def code_received(
 
     auth, profile = _services(message, sessions)
     try:
-        auth.authenticate_with_code(phone, code)
-        tinder_profile = profile.get_profile()
+        await asyncio.to_thread(auth.authenticate_with_code, phone, code)
+        tinder_profile = await asyncio.to_thread(profile.get_profile)
     except Exception as exc:
         await message.answer(f"Не удалось завершить авторизацию: {exc}")
         return
 
     await state.clear()
     await message.answer(
-        f"Авторизация успешна!\n"
-        f"Профиль: {tinder_profile.name}\n"
-        f"Город: {tinder_profile.city}\n"
+        f"Авторизация успешна!\\n"
+        f"Профиль: {tinder_profile.name}\\n"
+        f"Город: {tinder_profile.city}\\n"
         f"Страна: {tinder_profile.country}",
         reply_markup=main_keyboard(),
     )
@@ -108,8 +110,8 @@ async def token_received(
 
     auth, profile = _services(message, sessions)
     try:
-        auth.authenticate_with_token(token)
-        tinder_profile = profile.get_profile()
+        await asyncio.to_thread(auth.authenticate_with_token, token)
+        tinder_profile = await asyncio.to_thread(profile.get_profile)
     except Exception as exc:
         await message.answer(
             f"Token не подошёл или Tinder API недоступен: {exc}"
@@ -118,9 +120,9 @@ async def token_received(
 
     await state.clear()
     await message.answer(
-        f"Авторизация успешна!\n"
-        f"Профиль: {tinder_profile.name}\n"
-        f"Город: {tinder_profile.city}\n"
+        f"Авторизация успешна!\\n"
+        f"Профиль: {tinder_profile.name}\\n"
+        f"Город: {tinder_profile.city}\\n"
         f"Страна: {tinder_profile.country}",
         reply_markup=main_keyboard(),
     )
