@@ -1,5 +1,8 @@
 from app.services.auto_swipe import AutoSwipeService
-from app.tinder.models import MatchStats, SwipeResult
+from app.services.matches import MatchService
+from app.services.recommendations import RecommendationService
+from app.services.swipe import SwipeService
+from app.tinder.models import MatchStats, Recommendation, SwipeResult, TinderUser
 
 
 class FakeLocationService:
@@ -59,6 +62,44 @@ class FakeSwipes:
         )
 
 
+def recommendation(user_id, photos):
+    user = TinderUser(
+        id=user_id,
+        name=user_id,
+        photos=photos,
+        raw={"_id": user_id},
+    )
+    return Recommendation(user=user, s_number=1, raw={})
+
+
+class FakeAutoSwipeClient:
+    def __init__(self, batches):
+        self.batches = list(batches)
+        self.recommendation_calls = 0
+        self.match_count = 10
+        self.likes = []
+        self.dislikes = []
+
+    def set_location(self, latitude, longitude):
+        pass
+
+    def get_recommendations(self):
+        self.recommendation_calls += 1
+        if not self.batches:
+            return []
+        return self.batches.pop(0)
+
+    def get_matches_count(self):
+        return self.match_count
+
+    def like(self, user_id):
+        self.likes.append(user_id)
+        self.match_count += 1
+
+    def dislike(self, user_id, s_number=None):
+        self.dislikes.append((user_id, s_number))
+
+
 def test_auto_swipe_follows_required_business_order():
     events = []
     service = AutoSwipeService(
@@ -84,23 +125,39 @@ def test_auto_swipe_follows_required_business_order():
     assert result.match_stats.new_matches == 2
 
 
-def test_auto_swipe_reports_recommendations_from_all_batches():
-    events = []
-    recommendations = FakeRecommendations(
-        events,
-        batches=[["first"], ["second", "third"]],
+def test_auto_swipe_processes_multiple_recommendation_batches_until_limit():
+    client = FakeAutoSwipeClient(
+        batches=[
+            [
+                recommendation("first", [{"url": "1"}]),
+                recommendation("second", [{"url": "1"}]),
+            ],
+            [
+                recommendation("third", [{"url": "1"}, {"url": "2"}]),
+                recommendation("fourth", [{"url": "1"}]),
+            ],
+        ]
     )
-    swipes = FakeSwipes(events, recommendations_received=3)
+    recommendations = RecommendationService(client)
     service = AutoSwipeService(
-        location_service=FakeLocationService(events),
+        location_service=FakeLocationService([]),
         recommendation_service=recommendations,
-        match_service=FakeMatches(events),
-        swipe_service=swipes,
+        match_service=MatchService(client),
+        swipe_service=SwipeService(client, recommendations, swipe_limit=3),
     )
 
     result = service.run("Amsterdam")
 
-    assert result.recommendations_received == 3
+    assert client.recommendation_calls == 2
+    assert client.likes == ["third"]
+    assert client.dislikes == [("first", 1), ("second", 1)]
+    assert result.recommendations_received == 4
+    assert result.swipe_result.swipes == 3
+    assert result.swipe_result.limit_reached is True
+    assert result.swipe_result.recommendations_exhausted is False
+    assert result.match_stats.before == 10
+    assert result.match_stats.after == 11
+    assert result.match_stats.new_matches == 1
 
 
 def test_empty_first_batch_does_not_fetch_recommendations_twice():
