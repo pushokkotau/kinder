@@ -223,8 +223,6 @@ $("tokenAuthButton").addEventListener("click", () => showAuthForm("tokenForm"));
 $("phoneAuthButton").addEventListener("click", () => showAuthForm("phoneForm"));
 $("logoutButton").addEventListener("click", () => logout());
 async function handleTokenLogin(event) {
-  event.preventDefault();
-  event.stopPropagation();
   if (state.authBusy) return;
   const token = $("tokenInput").value.trim();
   if (!token) {
@@ -247,7 +245,6 @@ async function handleTokenLogin(event) {
     button.textContent = "Войти";
   }
 }
-$("tokenForm").addEventListener("submit", handleTokenLogin);
 $("tokenForm").querySelector("button").addEventListener("click", handleTokenLogin);
 async function handlePhoneRequest(event) {
   event.preventDefault();
@@ -274,7 +271,6 @@ async function handlePhoneRequest(event) {
     button.textContent = "Получить код";
   }
 }
-$("phoneForm").addEventListener("submit", handlePhoneRequest);
 $("phoneForm").querySelector("button").addEventListener("click", handlePhoneRequest);
 async function handleCodeVerify(event) {
   event.preventDefault();
@@ -301,7 +297,6 @@ async function handleCodeVerify(event) {
     button.textContent = "Подтвердить";
   }
 }
-$("codeForm").addEventListener("submit", handleCodeVerify);
 $("codeForm").querySelector("button").addEventListener("click", handleCodeVerify);
 async function init() {
   if (!state.token) return;
