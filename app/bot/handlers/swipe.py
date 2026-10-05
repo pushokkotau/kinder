@@ -26,16 +26,17 @@ async def location_received(
         await message.answer("Город не должен быть пустым.")
         return
 
-    await MainStates.swiping.set()
     client = sessions.get_client(message.from_user.id)
+    recommendations = RecommendationService(client)
 
     service = AutoSwipeService(
         location_service=LocationService(client),
-        recommendation_service=RecommendationService(client),
+        recommendation_service=recommendations,
         match_service=MatchService(client),
-        swipe_service=SwipeService(client, RecommendationService(client)),
+        swipe_service=SwipeService(client, recommendations),
     )
 
+    await MainStates.swiping.set()
     await message.answer("Запускаю AutoSwipe...")
 
     try:
@@ -51,12 +52,17 @@ async def location_received(
     await state.finish()
     swipe = result.swipe_result
     matches = result.match_stats
-    status = "Лимит достигнут" if swipe.limit_reached else "Рекомендации закончились"
+    status = (
+        "Лимит достигнут"
+        if swipe.limit_reached
+        else "Рекомендации закончились"
+    )
 
     await message.answer(
         f"AutoSwipe завершён.\n\n"
         f"Город: {result.location.address or city}\n"
-        f"Получено рекомендаций в первой порции: {result.recommendations_received}\n"
+        f"Получено рекомендаций в первой порции: "
+        f"{result.recommendations_received}\n"
         f"Свайпов выполнено: {swipe.swipes}\n"
         f"Лайков: {swipe.likes}\n"
         f"Дизлайков: {swipe.dislikes}\n"
