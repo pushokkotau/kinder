@@ -51,6 +51,7 @@ function render() {
   const profile = state.recommendations[state.index];
   if (!profile) {
     $("profileCard").classList.add("hidden");
+    $("actions").classList.add("hidden");
     $("emptyState").classList.remove("hidden");
     $("autoSwipeButton").classList.add("hidden");
     $("status").textContent = "Подборка завершена";
@@ -58,6 +59,7 @@ function render() {
   }
   $("emptyState").classList.add("hidden");
   $("profileCard").classList.remove("hidden");
+  $("actions").classList.remove("hidden");
   state.photoIndex = 0;
   $("profilePhoto").classList.remove("photo-placeholder");
   $("profilePhoto").src = profile.photos?.[0]?.url || profile.photos?.[0] || "";
@@ -70,6 +72,24 @@ function render() {
   $("matchesCount").textContent = $("matchesCount").textContent || "0";
   $("photoDots").innerHTML = (profile.photos || []).map((_, i) => `<i class="${i === 0 ? "active" : ""}" data-photo-index="${i}"></i>`).join("");
   document.querySelectorAll("#photoDots i").forEach(dot => dot.addEventListener("click", () => showPhoto(Number(dot.dataset.photoIndex))));
+}
+
+function showPhoto(index) {
+  const profile = state.recommendations[state.index];
+  const photos = profile?.photos || [];
+  if (!photos.length) return;
+  state.photoIndex = Math.max(0, Math.min(index, photos.length - 1));
+  const photo = photos[state.photoIndex];
+  $("profilePhoto").classList.remove("photo-placeholder");
+  $("profilePhoto").src = photo?.url || photo || "";
+  $("profilePhoto").onerror = () => { $("profilePhoto").removeAttribute("src"); $("profilePhoto").classList.add("photo-placeholder"); };
+  document.querySelectorAll("#photoDots i").forEach((dot, i) => dot.classList.toggle("active", i === state.photoIndex));
+}
+
+function changePhoto(direction) {
+  const photos = state.recommendations[state.index]?.photos || [];
+  if (photos.length < 2) return;
+  showPhoto((state.photoIndex + direction + photos.length) % photos.length);
 }
 
 async function swipe(action) {
@@ -102,8 +122,14 @@ async function applyCity() {
   try {
     await api("/location", { method: "POST", body: JSON.stringify({ city }) });
     state.city = city;
+    state.selectedCity = city;
+    state.recommendations = [];
+    state.index = 0;
     $("cityName").textContent = city;
     $("cityDialog").close();
+    $("emptyState").classList.add("hidden");
+    $("profileCard").classList.remove("hidden");
+    $("actions").classList.remove("hidden");
     state.beforeMatches = await loadMatches();
     toast(`Ищем анкеты в городе «${city}»`);
     await loadRecommendations();
@@ -155,6 +181,7 @@ async function runAutoSwipe() {
     const result = await api("/autoswipe", { method: "POST" });
     $("profileCard").classList.add("hidden");
     $("emptyState").classList.remove("hidden");
+    $("actions").classList.add("hidden");
     $("autoSwipeButton").classList.add("hidden");
     $("emptyState").querySelector("h2").textContent = "AutoSwipe завершён ♥";
     $("swipeResultText").textContent = `Свайпов: ${result.swipes} · Лайков: ${result.likes} · Дизлайков: ${result.dislikes} · Новых матчей: +${result.new_matches} · Всего: ${result.matches_after}`;
@@ -220,12 +247,12 @@ $("profilePhoto").addEventListener("click", () => {
   if (photos.length > 1) showPhoto((state.photoIndex + 1) % photos.length);
 });
 document.addEventListener("keydown", (event) => {
-  if (event.key === "ArrowLeft") swipe("dislike");
-  if (event.key === "ArrowRight") swipe("like");
-  if (event.key === "ArrowUp") {
-    const photos = state.recommendations[state.index]?.photos || [];
-    if (photos.length > 1) showPhoto((state.photoIndex + 1) % photos.length);
-  }
+  if (event.key === "ArrowLeft") changePhoto(-1);
+  if (event.key === "ArrowRight") changePhoto(1);
+});
+$("profilePhoto").addEventListener("click", (event) => {
+  const rect = $("profilePhoto").getBoundingClientRect();
+  changePhoto(event.clientX < rect.left + rect.width / 2 ? -1 : 1);
 });
 $("cityButton").addEventListener("click", openCityDialog);
 $("changeCityButton").addEventListener("click", openCityDialog);
