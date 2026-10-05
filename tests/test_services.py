@@ -19,10 +19,10 @@ def recommendation(user_id: str, photos: int = 2) -> Recommendation:
 
 
 class FakeTinderClient:
-    def __init__(self, matches=10, events=None):
+    def __init__(self, match_snapshots=None, events=None):
         self.likes = []
         self.dislikes = []
-        self.matches = matches
+        self.match_snapshots = iter(match_snapshots or [[]])
         self.events = events if events is not None else []
 
     def set_location(self, latitude, longitude):
@@ -33,8 +33,11 @@ class FakeTinderClient:
         return []
 
     def get_matches_count(self):
-        self.events.append(("matches", self.matches))
-        return self.matches
+        matches = next(self.match_snapshots, None)
+        if matches is None:
+            raise AssertionError("Tinder API match snapshots were exhausted")
+        self.events.append(("matches", len(matches)))
+        return len(matches)
 
     def like(self, user_id):
         self.events.append(("like", user_id))
@@ -116,9 +119,19 @@ def test_swipe_service_respects_global_limit():
     assert client.likes == ["only-one"]
 
 
-def test_auto_swipe_runs_complete_flow_and_calculates_new_matches():
+def test_auto_swipe_uses_tinder_api_match_lists_before_and_after():
     events = []
-    client = FakeTinderClient(matches=10, events=events)
+    initial_matches = [
+        {"_id": "match-1"},
+        {"_id": "match-2"},
+        {"_id": "match-3"},
+    ]
+    after_matches = initial_matches + [{"_id": "match-4"}]
+
+    client = FakeTinderClient(
+        match_snapshots=[initial_matches, after_matches],
+        events=events,
+    )
     recommendations = FakeRecommendationService([
         [
             recommendation("like-1", 2),
@@ -144,14 +157,46 @@ def test_auto_swipe_runs_complete_flow_and_calculates_new_matches():
     assert result.swipe_result.swipes == 2
     assert result.swipe_result.likes == 1
     assert result.swipe_result.dislikes == 1
-    assert result.match_stats.before == 10
-    assert result.match_stats.after == 10
-    assert result.match_stats.new_matches == 0
+    assert result.match_stats.before == 3
+    assert result.match_stats.after == 4
+    assert result.match_stats.new_matches == 1
     assert events == [
         ("location_service", "Test City"),
         ("location", 1.0, 2.0),
-        ("matches", 10),
+        ("matches", 3),
         ("like", "like-1"),
         ("dislike", "dislike-1", 1),
-        ("matches", 10),
+        ("matches", 4),
     ]
+
+
+def test_like_does_not_change_match_count_without_api_match_update():
+    events = []
+    matches = [
+        {"_id": "match-1"},
+        {"_id": "match-2"},
+    ]
+    client = FakeTinderClient(
+        match_snapshots=[matches, matches],
+        events=events,
+    )
+    recommendations = FakeRecommendationService([
+        [recommendation("like-1", 2)],
+    ])
+
+    service = AutoSwipeService(
+        location_service=FakeLocationService(client),
+        recommendation_service=recommendations,
+        match_service=MatchService(client),
+        swipe_service=SwipeService(
+            client,
+            recommendations,
+            swipe_limit=1,
+        ),
+    )
+
+    result = service.run("Test City")
+
+    assert result.match_stats.before == 2
+    assert result.match_stats.after == 2
+    assert result.match_stats.new_matches == 0
