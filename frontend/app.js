@@ -71,10 +71,20 @@ async function swipe(action) {
     await api(`/swipes/${action}/${encodeURIComponent(profile.id)}`, { method: "POST" });
     state.index += 1;
     if (action === "like") toast("♥ Лайк отправлен"); else toast("× Пропущено");
-    await loadMatches();
     render();
-    if (!state.recommendations[state.index]) await loadRecommendations();
+    if (!state.recommendations[state.index]) await finishManualSwiping();
   } catch (error) { toast(error.message); }
+}
+
+async function finishManualSwiping() {
+  try {
+    await loadMatches();
+    $("status").textContent = "Свайпинг завершён";
+    $("emptyState").querySelector("h2").textContent = "Свайпинг завершён ♥";
+    $("emptyState").querySelector("p").textContent = `Всего матчей: ${$("matchesCount").textContent}`;
+  } catch (error) {
+    toast(error.message);
+  }
 }
 
 async function applyCity() {
