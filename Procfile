@@ -1,1 +1,1 @@
-worker: python tg_bot.py $PORT
+worker: python main.py $PORT
