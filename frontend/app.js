@@ -100,6 +100,48 @@ function initCities() {
   }));
 }
 
+async function authenticateToken(token) {
+  const data = await api("/auth/token", { method: "POST", body: JSON.stringify({ token }) });
+  state.token = data.session_token;
+  localStorage.setItem("kinder_session_token", state.token);
+}
+async function requestPhone(phone) {
+  const data = await api("/auth/phone", { method: "POST", body: JSON.stringify({ phone }) });
+  state.phone = phone;
+  state.token = data.session_token;
+  localStorage.setItem("kinder_session_token", state.token);
+}
+async function verifyPhone(code) {
+  const data = await api("/auth/phone/verify", { method: "POST", body: JSON.stringify({ phone: state.phone, code }) });
+  state.token = data.session_token;
+  localStorage.setItem("kinder_session_token", state.token);
+}
+function showApp() {
+  $("authScreen").classList.add("hidden");
+  $("appScreen").classList.remove("hidden");
+}
+function showAuthForm(id) {
+  ["tokenForm", "phoneForm", "codeForm"].forEach(form => $(form).classList.add("hidden"));
+  $(id).classList.remove("hidden");
+  $("authChoice").classList.add("hidden");
+}
+$("tokenAuthButton").addEventListener("click", () => showAuthForm("tokenForm"));
+$("phoneAuthButton").addEventListener("click", () => showAuthForm("phoneForm"));
+$("tokenForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  try { await authenticateToken($("tokenInput").value.trim()); showApp(); await init(); }
+  catch (error) { toast(error.message); }
+});
+$("phoneForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  try { await requestPhone($("phoneInput").value.trim()); showAuthForm("codeForm"); }
+  catch (error) { toast(error.message); }
+});
+$("codeForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  try { await verifyPhone($("codeInput").value.trim()); showApp(); await init(); }
+  catch (error) { toast(error.message); }
+});
 async function init() {
   if (!requireAuth()) return;
   try {
