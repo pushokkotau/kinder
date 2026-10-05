@@ -1,7 +1,8 @@
 import phonenumbers
 
-from aiogram import Dispatcher, types
-from aiogram.dispatcher import FSMContext
+from aiogram import F, Router
+from aiogram.fsm.context import FSMContext
+from aiogram.types import CallbackQuery, Message
 
 from app.bot.keyboards import main_keyboard
 from app.bot.states import AuthStates
@@ -10,21 +11,21 @@ from app.services.profile import ProfileService
 from app.services.session import TinderSessionManager
 
 
-def _services(message: types.Message, sessions: TinderSessionManager):
+def _services(message: Message, sessions: TinderSessionManager):
     client = sessions.get_client(message.from_user.id)
     return AuthService(client), ProfileService(client)
 
 
-async def phone_start(callback: types.CallbackQuery, state: FSMContext) -> None:
-    await AuthStates.waiting_phone.set()
+async def phone_start(callback: CallbackQuery, state: FSMContext) -> None:
+    await state.set_state(AuthStates.waiting_phone)
     await callback.message.answer(
         "Отправь номер телефона в международном формате, например +31612345678."
     )
     await callback.answer()
 
 
-async def token_start(callback: types.CallbackQuery, state: FSMContext) -> None:
-    await AuthStates.waiting_test_token.set()
+async def token_start(callback: CallbackQuery, state: FSMContext) -> None:
+    await state.set_state(AuthStates.waiting_test_token)
     await callback.message.answer(
         "Отправь Tinder token. Этот способ нужен только для тестирования."
     )
@@ -32,11 +33,11 @@ async def token_start(callback: types.CallbackQuery, state: FSMContext) -> None:
 
 
 async def phone_received(
-    message: types.Message,
+    message: Message,
     state: FSMContext,
     sessions: TinderSessionManager,
 ) -> None:
-    raw_phone = message.text.strip()
+    raw_phone = (message.text or "").strip()
     try:
         parsed = phonenumbers.parse(raw_phone, None)
         if not phonenumbers.is_valid_number(parsed):
@@ -59,21 +60,21 @@ async def phone_received(
         return
 
     await state.update_data(phone=phone)
-    await AuthStates.waiting_code.set()
+    await state.set_state(AuthStates.waiting_code)
     await message.answer("Код отправлен. Теперь отправь код из Tinder.")
 
 
 async def code_received(
-    message: types.Message,
+    message: Message,
     state: FSMContext,
     sessions: TinderSessionManager,
 ) -> None:
     data = await state.get_data()
     phone = data.get("phone")
-    code = message.text.strip()
+    code = (message.text or "").strip()
 
     if not phone:
-        await state.finish()
+        await state.clear()
         await message.answer("Сессия авторизации потеряна. Начни заново через /start.")
         return
 
@@ -85,7 +86,7 @@ async def code_received(
         await message.answer(f"Не удалось завершить авторизацию: {exc}")
         return
 
-    await state.finish()
+    await state.clear()
     await message.answer(
         f"Авторизация успешна!\n"
         f"Профиль: {tinder_profile.name}\n"
@@ -96,11 +97,11 @@ async def code_received(
 
 
 async def token_received(
-    message: types.Message,
+    message: Message,
     state: FSMContext,
     sessions: TinderSessionManager,
 ) -> None:
-    token = message.text.strip()
+    token = (message.text or "").strip()
     if not token:
         await message.answer("Token не должен быть пустым.")
         return
@@ -115,7 +116,7 @@ async def token_received(
         )
         return
 
-    await state.finish()
+    await state.clear()
     await message.answer(
         f"Авторизация успешна!\n"
         f"Профиль: {tinder_profile.name}\n"
@@ -125,35 +126,27 @@ async def token_received(
     )
 
 
-def register(dp: Dispatcher, sessions: TinderSessionManager) -> None:
-    dp.register_callback_query_handler(
-        phone_start, lambda c: c.data == "auth:phone", state="*"
-    )
-    dp.register_callback_query_handler(
-        token_start, lambda c: c.data == "auth:token", state="*"
-    )
+def create_router(sessions: TinderSessionManager) -> Router:
+    router = Router()
 
-    async def phone_handler(message: types.Message, state: FSMContext):
+    @router.callback_query(F.data == "auth:phone")
+    async def phone_callback(callback: CallbackQuery, state: FSMContext):
+        await phone_start(callback, state)
+
+    @router.callback_query(F.data == "auth:token")
+    async def token_callback(callback: CallbackQuery, state: FSMContext):
+        await token_start(callback, state)
+
+    @router.message(AuthStates.waiting_phone)
+    async def phone_handler(message: Message, state: FSMContext):
         await phone_received(message, state, sessions)
 
-    async def code_handler(message: types.Message, state: FSMContext):
+    @router.message(AuthStates.waiting_code)
+    async def code_handler(message: Message, state: FSMContext):
         await code_received(message, state, sessions)
 
-    async def token_handler(message: types.Message, state: FSMContext):
+    @router.message(AuthStates.waiting_test_token)
+    async def token_handler(message: Message, state: FSMContext):
         await token_received(message, state, sessions)
 
-    dp.register_message_handler(
-        phone_handler,
-        state=AuthStates.waiting_phone,
-        content_types=types.ContentType.TEXT,
-    )
-    dp.register_message_handler(
-        code_handler,
-        state=AuthStates.waiting_code,
-        content_types=types.ContentType.TEXT,
-    )
-    dp.register_message_handler(
-        token_handler,
-        state=AuthStates.waiting_test_token,
-        content_types=types.ContentType.TEXT,
-    )
+    return router
