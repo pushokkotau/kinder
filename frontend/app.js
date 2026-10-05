@@ -109,6 +109,7 @@ async function swipe(action) {
 async function finishManualSwiping() {
   try {
     const afterMatches = await loadMatches();
+    $("matchesCount").textContent = afterMatches;
     const newMatches = Math.max(0, afterMatches - state.beforeMatches);
     $("actions").classList.add("hidden");
     $("swipeHint").classList.add("hidden");
@@ -189,6 +190,7 @@ async function runAutoSwipe() {
   $("status").textContent = "Запускаем AutoSwipe…";
   try {
     const result = await api("/autoswipe", { method: "POST" });
+    $("matchesCount").textContent = result.matches_after;
     $("profileCard").classList.add("hidden");
     $("emptyState").classList.remove("hidden");
     $("actions").classList.add("hidden");
