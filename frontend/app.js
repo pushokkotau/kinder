@@ -222,15 +222,22 @@ function showAuthForm(id) {
 $("tokenAuthButton").addEventListener("click", () => showAuthForm("tokenForm"));
 $("phoneAuthButton").addEventListener("click", () => showAuthForm("phoneForm"));
 $("logoutButton").addEventListener("click", () => logout());
-$("tokenForm").addEventListener("submit", async (event) => {
+async function handleTokenLogin(event) {
   event.preventDefault();
+  event.stopPropagation();
   if (state.authBusy) return;
-  const button = event.currentTarget.querySelector("button[type=submit]");
+  const token = $("tokenInput").value.trim();
+  if (!token) {
+    $("tokenInput").focus();
+    toast("Введи Tinder token");
+    return;
+  }
+  const button = $("tokenForm").querySelector("button");
   state.authBusy = true;
   button.disabled = true;
   button.textContent = "Входим…";
   try {
-    await authenticateToken($("tokenInput").value.trim());
+    await authenticateToken(token);
     await init();
   } catch (error) {
     toast(error.message);
@@ -239,16 +246,25 @@ $("tokenForm").addEventListener("submit", async (event) => {
     button.disabled = false;
     button.textContent = "Войти";
   }
-});
-$("phoneForm").addEventListener("submit", async (event) => {
+}
+$("tokenForm").addEventListener("submit", handleTokenLogin);
+$("tokenForm").querySelector("button").addEventListener("click", handleTokenLogin);
+async function handlePhoneRequest(event) {
   event.preventDefault();
+  event.stopPropagation();
   if (state.authBusy) return;
-  const button = event.currentTarget.querySelector("button[type=submit]");
+  const phone = $("phoneInput").value.trim();
+  if (!phone) {
+    $("phoneInput").focus();
+    toast("Введи номер телефона");
+    return;
+  }
+  const button = $("phoneForm").querySelector("button");
   state.authBusy = true;
   button.disabled = true;
   button.textContent = "Отправляем…";
   try {
-    await requestPhone($("phoneInput").value.trim());
+    await requestPhone(phone);
     showAuthForm("codeForm");
   } catch (error) {
     toast(error.message);
@@ -257,16 +273,25 @@ $("phoneForm").addEventListener("submit", async (event) => {
     button.disabled = false;
     button.textContent = "Получить код";
   }
-});
-$("codeForm").addEventListener("submit", async (event) => {
+}
+$("phoneForm").addEventListener("submit", handlePhoneRequest);
+$("phoneForm").querySelector("button").addEventListener("click", handlePhoneRequest);
+async function handleCodeVerify(event) {
   event.preventDefault();
+  event.stopPropagation();
   if (state.authBusy) return;
-  const button = event.currentTarget.querySelector("button[type=submit]");
+  const code = $("codeInput").value.trim();
+  if (!code) {
+    $("codeInput").focus();
+    toast("Введи код из SMS");
+    return;
+  }
+  const button = $("codeForm").querySelector("button");
   state.authBusy = true;
   button.disabled = true;
   button.textContent = "Проверяем…";
   try {
-    await verifyPhone($("codeInput").value.trim());
+    await verifyPhone(code);
     await init();
   } catch (error) {
     toast(error.message);
@@ -275,7 +300,9 @@ $("codeForm").addEventListener("submit", async (event) => {
     button.disabled = false;
     button.textContent = "Подтвердить";
   }
-});
+}
+$("codeForm").addEventListener("submit", handleCodeVerify);
+$("codeForm").querySelector("button").addEventListener("click", handleCodeVerify);
 async function init() {
   if (!state.token) return;
   try {
