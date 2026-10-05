@@ -12,15 +12,15 @@
   </div>
   <form id="tokenForm" class="auth-form hidden">
     <label>Tinder token<input id="tokenInput" type="password" autocomplete="off" required></label>
-    <button class="primary-button" type="submit">Войти</button>
+    <button class="primary-button" type="button">Войти</button>
   </form>
   <form id="phoneForm" class="auth-form hidden">
     <label>Номер телефона<input id="phoneInput" type="tel" placeholder="+31..." required></label>
-    <button class="primary-button" type="submit">Получить код</button>
+    <button class="primary-button" type="button">Получить код</button>
   </form>
   <form id="codeForm" class="auth-form hidden">
     <label>Код из SMS<input id="codeInput" type="text" inputmode="numeric" autocomplete="one-time-code" required></label>
-    <button class="primary-button" type="submit">Подтвердить</button>
+    <button class="primary-button" type="button">Подтвердить</button>
   </form>
   <p class="auth-note">Для разработки можно использовать тестовый режим backend.</p>
 </section>
@@ -34,4 +34,4 @@
 </section>
 </main>
 <dialog id="cityDialog"><form method="dialog" class="city-dialog"><div class="dialog-head"><div><small>Место поиска</small><h2>Выбери город</h2></div><button class="close" value="cancel" type="submit">×</button></div><div class="city-options" id="cityOptions"></div><label class="custom-city">Или введи свой город<input id="customCity" type="text" placeholder="Например, Нью-Йорк"></label><button class="primary-button" id="applyCityButton" value="default" type="submit">Начать поиск здесь</button></form></dialog>
-<div class="toast" id="toast" role="status"></div><script src="./app.js"></script></body></html>
+<div class="toast" id="toast" role="status"></div><script src="./app.js?v=auth2"></script></body></html>
