@@ -1,1 +1,123 @@
-const cities=["Амстердам","Москва","Нью-Йорк","Лондон","Берлин","Париж"];const mockProfiles=[{id:"1",name:"Алиса",age:26,city:"Амстердам",bio:"Люблю путешествия, кофе и длинные прогулки.",photos:["https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=900&q=85"]},{id:"2",name:"София",age:29,city:"Амстердам",bio:"Музыка, спорт и спонтанные поездки на выходных.",photos:["https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&q=85"]},{id:"3",name:"Мия",age:25,city:"Амстердам",bio:"Ищу человека, с которым можно смеяться над ерундой.",photos:["https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&q=85"]},{id:"4",name:"Ева",age:31,city:"Амстердам",bio:"Книги, архитектура и хороший завтрак — уже три причины познакомиться.",photos:["https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=900&q=85"]},{id:"5",name:"Лина",age:27,city:"Амстердам",bio:"Море всегда лучше, чем офис. Но кофе нужен везде.",photos:["https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=900&q=85"]}];const state={city:"Амстердам",matches:10,index:0,selectedCity:"Амстердам"};const $=id=>document.getElementById(id);function toast(m){$("toast").textContent=m;$("toast").classList.add("show");clearTimeout(toast.timer);toast.timer=setTimeout(()=>$("toast").classList.remove("show"),1600)}function profiles(){return mockProfiles.map(p=>({...p,city:state.city}))}function render(){const p=profiles()[state.index];if(!p){$("profileCard").classList.add("hidden");$("emptyState").classList.remove("hidden");$("status").textContent="Подборка завершена";return}$("emptyState").classList.add("hidden");$("profileCard").classList.remove("hidden");$("profilePhoto").src=p.photos[0];$("profileName").textContent=p.name;$("profileAge").textContent=p.age;$("profileMeta").textContent=p.city;$("profileBio").textContent=p.bio;$("cityName").textContent=state.city;$("matchesCount").textContent=state.matches;$("photoDots").innerHTML=p.photos.map((_,i)=>"<i class='"+(i===0?"active":"")+"'></i>").join("")}function swipe(k){if(!profiles()[state.index])return;if(k==="like"){state.matches++;toast("♥ Лайк отправлен")}else toast("× Пропущено");state.index++;render()}function initCities(){$("cityOptions").innerHTML=cities.map(c=>"<button type='button' class='city-option "+(c===state.city?"selected":"")+"' data-city='"+c+"'>"+c+"</button>").join("");document.querySelectorAll(".city-option").forEach(b=>b.addEventListener("click",()=>{state.selectedCity=b.dataset.city;document.querySelectorAll(".city-option").forEach(x=>x.classList.remove("selected"));b.classList.add("selected");$("customCity").value=""}))}function openCities(){state.selectedCity=state.city;$("customCity").value="";initCities();$("cityDialog").showModal()}function applyCity(){const city=$("customCity").value.trim()||state.selectedCity;if(!city)return;state.city=city;state.index=0;$("cityDialog").close();toast("Ищем анкеты в городе «"+city+"»");render()}$("likeButton").onclick=()=>swipe("like");$("dislikeButton").onclick=()=>swipe("dislike");$("cityButton").onclick=openCities;$("changeCityButton").onclick=openCities;$("applyCityButton").onclick=e=>{e.preventDefault();applyCity()};document.addEventListener("keydown",e=>{if(e.key==="ArrowLeft")swipe("dislike");if(e.key==="ArrowRight")swipe("like")});render();
+const API_BASE = window.KINDER_API_BASE || "http://localhost:8000/api/v1";
+const state = { token: localStorage.getItem("kinder_session_token"), city: "", recommendations: [], index: 0 };
+
+const $ = (id) => document.getElementById(id);
+function toast(message) { $("toast").textContent = message; $("toast").classList.add("show"); clearTimeout(toast.timer); toast.timer = setTimeout(() => $("toast").classList.remove("show"), 1600); }
+
+async function api(path, options = {}) {
+  const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+  if (state.token) headers.Authorization = `Bearer ${state.token}`;
+  const response = await fetch(API_BASE + path, { ...options, headers });
+  let data = {};
+  try { data = await response.json(); } catch (_) {}
+  if (!response.ok) throw new Error(data.detail || `API error: ${response.status}`);
+  return data;
+}
+
+function requireAuth() {
+  if (!state.token) {
+    $("profileName").textContent = "Нужна авторизация";
+    $("profileMeta").textContent = "Перед подключением frontend нужен Tinder token.";
+    $("profileBio").textContent = "Откройте API-авторизацию или установите session token в localStorage.";
+    $("profileCard").classList.remove("hidden");
+    $("emptyState").classList.add("hidden");
+    return false;
+  }
+  return true;
+}
+
+async function loadProfile() {
+  const profile = await api("/profile");
+  state.city = profile.city || "Город не определен";
+  $("cityName").textContent = state.city;
+}
+
+async function loadMatches() {
+  const data = await api("/matches/count");
+  $("matchesCount").textContent = data.count;
+}
+
+async function loadRecommendations() {
+  const data = await api("/recommendations");
+  state.recommendations = data.recommendations || [];
+  state.index = 0;
+  render();
+}
+
+function render() {
+  const profile = state.recommendations[state.index];
+  if (!profile) {
+    $("profileCard").classList.add("hidden");
+    $("emptyState").classList.remove("hidden");
+    $("status").textContent = "Подборка завершена";
+    return;
+  }
+  $("emptyState").classList.add("hidden");
+  $("profileCard").classList.remove("hidden");
+  $("profilePhoto").src = profile.photos?.[0]?.url || profile.photos?.[0] || "";
+  $("profileName").textContent = profile.name || "Без имени";
+  $("profileAge").textContent = "";
+  $("profileMeta").textContent = state.city;
+  $("profileBio").textContent = "";
+  $("status").textContent = "Новая рекомендация";
+  $("matchesCount").textContent = $("matchesCount").textContent || "0";
+  $("photoDots").innerHTML = (profile.photos || []).map((_, i) => `<i class="${i === 0 ? "active" : ""}"></i>`).join("");
+}
+
+async function swipe(action) {
+  const profile = state.recommendations[state.index];
+  if (!profile) return;
+  try {
+    await api(`/swipes/${action}/${encodeURIComponent(profile.id)}`, { method: "POST" });
+    state.index += 1;
+    if (action === "like") toast("♥ Лайк отправлен"); else toast("× Пропущено");
+    await loadMatches();
+    render();
+    if (!state.recommendations[state.index]) await loadRecommendations();
+  } catch (error) { toast(error.message); }
+}
+
+async function applyCity() {
+  const city = $("customCity").value.trim() || state.selectedCity;
+  if (!city) return;
+  try {
+    await api("/location", { method: "POST", body: JSON.stringify({ city }) });
+    state.city = city;
+    $("cityDialog").close();
+    toast(`Ищем анкеты в городе «${city}»`);
+    await loadRecommendations();
+  } catch (error) { toast(error.message); }
+}
+
+function initCities() {
+  const cities = ["Амстердам", "Москва", "Нью-Йорк", "Лондон", "Берлин", "Париж"];
+  $("cityOptions").innerHTML = cities.map(city => `<button type="button" class="city-option ${city === state.city ? "selected" : ""}" data-city="${city}">${city}</button>`).join("");
+  document.querySelectorAll(".city-option").forEach(button => button.addEventListener("click", () => {
+    state.selectedCity = button.dataset.city;
+    document.querySelectorAll(".city-option").forEach(item => item.classList.remove("selected"));
+    button.classList.add("selected");
+    $("customCity").value = "";
+  }));
+}
+
+async function init() {
+  if (!requireAuth()) return;
+  try {
+    await loadProfile();
+    await loadMatches();
+    await loadRecommendations();
+  } catch (error) {
+    toast(error.message);
+  }
+}
+
+$("likeButton").addEventListener("click", () => swipe("like"));
+$("dislikeButton").addEventListener("click", () => swipe("dislike"));
+document.addEventListener("keydown", (event) => {
+  if (event.key === "ArrowLeft") swipe("dislike");
+  if (event.key === "ArrowRight") swipe("like");
+});
+$("cityButton").addEventListener("click", () => { state.selectedCity = state.city; $("customCity").value = ""; initCities(); $("cityDialog").showModal(); });
+$("changeCityButton").addEventListener("click", () => { state.selectedCity = state.city; $("customCity").value = ""; initCities(); $("cityDialog").showModal(); });
+$("applyCityButton").addEventListener("click", (event) => { event.preventDefault(); applyCity(); });
+init();
