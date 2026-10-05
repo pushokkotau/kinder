@@ -47,6 +47,7 @@ class FakeTinderClient(TinderClient):
 
     def set_location(self, latitude: float, longitude: float) -> None:
         self._require_auth()
+        self._recommendation_index = 0
 
     def get_recommendations(self) -> list[Recommendation]:
         self._require_auth()
