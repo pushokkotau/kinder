@@ -12,12 +12,15 @@ class FakeLocationService:
 
 
 class FakeRecommendations:
-    def __init__(self, events):
+    def __init__(self, events, batch=None):
         self.events = events
+        self.batch = ["recommendation"] if batch is None else batch
+        self.calls = 0
 
     def get_batch(self):
+        self.calls += 1
         self.events.append("recommendations")
-        return ["recommendation"]
+        return self.batch
 
 
 class FakeMatches:
@@ -38,8 +41,10 @@ class FakeMatches:
 class FakeSwipes:
     def __init__(self, events):
         self.events = events
+        self.calls = 0
 
     def run(self, batch):
+        self.calls += 1
         self.events.append(("swipes", batch))
         return SwipeResult(
             swipes=1,
@@ -73,3 +78,23 @@ def test_auto_swipe_follows_required_business_order():
     assert result.match_stats.before == 10
     assert result.match_stats.after == 12
     assert result.match_stats.new_matches == 2
+
+
+def test_empty_first_batch_does_not_fetch_recommendations_twice():
+    events = []
+    recommendations = FakeRecommendations(events, batch=[])
+    swipes = FakeSwipes(events)
+    service = AutoSwipeService(
+        location_service=FakeLocationService(events),
+        recommendation_service=recommendations,
+        match_service=FakeMatches(events),
+        swipe_service=swipes,
+    )
+
+    result = service.run("Amsterdam")
+
+    assert recommendations.calls == 1
+    assert swipes.calls == 0
+    assert result.recommendations_received == 0
+    assert result.swipe_result.swipes == 0
+    assert result.swipe_result.recommendations_exhausted is True
