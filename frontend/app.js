@@ -82,17 +82,44 @@ function swipeScreen() {
 
   return `
     <h1>Swipe</h1>
+
+    <p>
+      City: <strong>${state.city}</strong>
+      <button id="editCityBtn" type="button">Edit city</button>
+    </p>
+
     <div class="card">
       <div class="photo">PHOTO</div>
       <h2>${person.name}, ${person.age}</h2>
       <p>${person.city}</p>
       <p>${person.bio}</p>
     </div>
+
     <p>Swipes: ${state.swipes} / ${state.swipeLimit}</p>
+
     <div class="actions">
       <button id="dislikeBtn">Dislike</button>
       <button id="likeBtn">Like</button>
     </div>
+  `;
+}
+
+function cityEditScreen() {
+  return `
+    <h1>Edit city</h1>
+    <p class="muted">Changing the city does not reset your swipe progress.</p>
+
+    <form id="editCityForm">
+      <input id="editCity" value="${state.city || ""}" placeholder="New York" required>
+      <br><br>
+      <div class="actions">
+        <button type="button" id="cancelCityBtn">Cancel</button>
+        <button type="submit">Save city</button>
+      </div>
+    </form>
+
+    <p>Swipes: ${state.swipes} / ${state.swipeLimit}</p>
+    <p>Matches: ${state.matchesAfter}</p>
   `;
 }
 
@@ -138,6 +165,18 @@ document.addEventListener("submit", (event) => {
     state.screen = "mode";
     render();
   }
+
+  if (event.target.id === "editCityForm") {
+    const newCity = document.querySelector("#editCity").value.trim();
+
+    if (!newCity) {
+      return;
+    }
+
+    state.city = newCity;
+    state.screen = "swipe";
+    render();
+  }
 });
 
 document.addEventListener("click", (event) => {
@@ -151,6 +190,16 @@ document.addEventListener("click", (event) => {
   if (event.target.id === "swipeBtn") {
     state.mode = "swipe";
     state.matchesBefore = state.matchesAfter;
+    state.screen = "swipe";
+    render();
+  }
+
+  if (event.target.id === "editCityBtn") {
+    state.screen = "editCity";
+    render();
+  }
+
+  if (event.target.id === "cancelCityBtn") {
     state.screen = "swipe";
     render();
   }
