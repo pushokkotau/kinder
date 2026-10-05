@@ -51,8 +51,10 @@ class FakeTinderClient:
 class FakeRecommendationService:
     def __init__(self, batches):
         self.batches = iter(batches)
+        self.calls = 0
 
     def get_batch(self):
+        self.calls += 1
         return next(self.batches, [])
 
 
@@ -189,3 +191,68 @@ def test_like_does_not_change_match_count_without_api_update():
     assert result.match_stats.before == 10
     assert result.match_stats.after == 10
     assert result.match_stats.new_matches == 0
+
+
+def test_swipe_service_fetches_next_batch_after_current_batch_is_exhausted():
+    client = FakeTinderClient()
+    recommendations = FakeRecommendationService([
+        [recommendation("batch-1", 2)],
+        [recommendation("batch-2", 2)],
+    ])
+    service = SwipeService(client, recommendations, swipe_limit=2)
+
+    result = service.run([recommendation("batch-0", 2)])
+
+    assert result.swipes == 2
+    assert client.likes == ["batch-0", "batch-1"]
+    assert recommendations.calls == 1
+
+
+def test_swipe_service_stops_when_recommendations_are_exhausted():
+    client = FakeTinderClient()
+    recommendations = FakeRecommendationService([
+        [recommendation("only-one", 2)],
+    ])
+    service = SwipeService(client, recommendations, swipe_limit=100)
+
+    result = service.run([recommendation("first", 2)])
+
+    assert result.swipes == 2
+    assert result.limit_reached is False
+    assert result.recommendations_exhausted is True
+    assert client.likes == ["first", "only-one"]
+    assert recommendations.calls == 2
+
+
+def test_swipe_service_skips_duplicate_recommendations():
+    client = FakeTinderClient()
+    recommendations = FakeRecommendationService([
+        [recommendation("duplicate", 2), recommendation("unique", 2)],
+    ])
+    service = SwipeService(client, recommendations, swipe_limit=2)
+
+    result = service.run([recommendation("duplicate", 2)])
+
+    assert result.swipes == 2
+    assert client.likes == ["duplicate", "unique"]
+    assert recommendations.calls == 1
+
+
+def test_swipe_service_stops_exactly_at_limit_across_batches():
+    client = FakeTinderClient()
+    recommendations = FakeRecommendationService([
+        [recommendation("batch-2-a", 2), recommendation("batch-2-b", 2)],
+    ])
+    service = SwipeService(client, recommendations, swipe_limit=3)
+
+    result = service.run([
+        recommendation("batch-1-a", 2),
+        recommendation("batch-1-b", 2),
+    ])
+
+    assert result.swipes == 3
+    assert result.likes == 3
+    assert result.limit_reached is True
+    assert result.recommendations_exhausted is False
+    assert client.likes == ["batch-1-a", "batch-1-b", "batch-2-a"]
+    assert recommendations.calls == 1
