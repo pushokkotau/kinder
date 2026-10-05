@@ -1,0 +1,51 @@
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #fff;
+  color: #111;
+}
+
+button, input { font: inherit; }
+
+button {
+  cursor: pointer;
+  padding: 10px 16px;
+  border: 1px solid #111;
+  background: #fff;
+}
+
+input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #111;
+}
+
+.app {
+  width: min(100% - 32px, 560px);
+  margin: 48px auto;
+}
+
+.card {
+  border: 1px solid #111;
+  padding: 20px;
+  margin: 20px 0;
+}
+
+.photo {
+  height: 360px;
+  border: 1px solid #111;
+  display: grid;
+  place-items: center;
+  margin-bottom: 20px;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+}
+
+.actions button { flex: 1; }
+
+.muted { color: #666; }
