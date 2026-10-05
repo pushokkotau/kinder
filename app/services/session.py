@@ -1,7 +1,7 @@
 import os
 from typing import Dict
 
-from app.tinder.client import TinderClient
+from app.tinder.client import TinderAPIError, TinderClient
 from app.tinder.fake_client import FakeTinderClient
 
 
@@ -19,6 +19,12 @@ class TinderSessionManager:
             else:
                 self._clients[telegram_user_id] = FakeTinderClient()
         return self._clients[telegram_user_id]
+
+    def get_authenticated_client(self, telegram_user_id: int) -> TinderClient:
+        client = self.get_client(telegram_user_id)
+        if not client.is_authenticated:
+            raise TinderAPIError("Tinder user is not authenticated.")
+        return client
 
     def remove(self, telegram_user_id: int) -> None:
         self._clients.pop(telegram_user_id, None)
