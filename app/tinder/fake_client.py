@@ -47,6 +47,7 @@ class FakeTinderClient(TinderClient):
 
     def set_location(self, latitude: float, longitude: float) -> None:
         self._require_auth()
+        self._recommendation_index = 0
 
     def get_recommendations(self) -> list[Recommendation]:
         self._require_auth()
@@ -60,11 +61,9 @@ class FakeTinderClient(TinderClient):
             if index >= 12:
                 break
 
-            photos = [{"url": f"https://example.com/photo-{index}-1.jpg"}]
+            photos = [{"url": f"https://i.pravatar.cc/800?img={index + 1}"}]
             if index % 2 == 0:
-                photos.append(
-                    {"url": f"https://example.com/photo-{index}-2.jpg"}
-                )
+                photos.append({"url": f"https://i.pravatar.cc/800?img={index + 13}"})
 
             user = TinderUser(
                 id=f"fake-user-{index + 1}",

@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from app.services.location import LocationService
+from app.services.swipe import SwipeService
 from app.services.matches import MatchService
 from app.services.profile import ProfileService
 from app.services.recommendations import RecommendationService
@@ -133,6 +134,26 @@ def swipe(action: str, user_id: str, client=Depends(get_client)):
         client.dislike(user_id)
 
     return {"action": action, "user_id": user_id}
+
+
+@app.post("/api/v1/autoswipe")
+def autoswipe(client=Depends(get_client)):
+    before = MatchService(client).snapshot()
+    recommendations = RecommendationService(client).get_batch()
+    result = SwipeService(client, RecommendationService(client)).run(recommendations)
+    after = MatchService(client).snapshot()
+    stats = MatchService(client).calculate(before, after)
+    return {
+        "swipes": result.swipes,
+        "likes": result.likes,
+        "dislikes": result.dislikes,
+        "limit_reached": result.limit_reached,
+        "recommendations_exhausted": result.recommendations_exhausted,
+        "recommendations_received": result.recommendations_received,
+        "matches_before": stats.before,
+        "matches_after": stats.after,
+        "new_matches": stats.new_matches,
+    }
 
 
 @app.get("/api/v1/matches/count")
