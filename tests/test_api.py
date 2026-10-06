@@ -60,3 +60,43 @@ def test_invalid_swipe_action():
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 400
+
+
+def test_autoswipe_uses_complete_fake_match_flow(monkeypatch):
+    web_sessions.clear()
+
+    class FakeLocation:
+        address = "Amsterdam"
+        latitude = 52.3676
+        longitude = 4.9041
+
+    monkeypatch.setattr(
+        "app.api.LocationService.set_city",
+        lambda self, city: (
+            self.client.set_location(FakeLocation.latitude, FakeLocation.longitude),
+            FakeLocation(),
+        )[1],
+    )
+
+    token = authenticate()
+    headers = {"Authorization": f"Bearer {token}"}
+
+    location = client.post(
+        "/api/v1/location",
+        json={"city": "Amsterdam"},
+        headers=headers,
+    )
+    assert location.status_code == 200
+
+    result = client.post("/api/v1/autoswipe", headers=headers)
+    assert result.status_code == 200
+    data = result.json()
+
+    assert data["matches_before"] == 10
+    assert data["matches_after"] == 16
+    assert data["new_matches"] == 6
+    assert data["swipes"] == 12
+    assert data["likes"] == 6
+    assert data["dislikes"] == 6
+    assert data["recommendations_received"] == 12
+    assert data["recommendations_exhausted"] is True

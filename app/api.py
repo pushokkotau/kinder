@@ -5,9 +5,10 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from app.services.auto_swipe import AutoSwipeService
 from app.services.location import LocationService
-from app.services.swipe import SwipeService
 from app.services.matches import MatchService
+from app.services.swipe import SwipeService
 from app.services.profile import ProfileService
 from app.services.recommendations import RecommendationService
 from app.services.session import TinderSessionManager
@@ -24,6 +25,7 @@ app.add_middleware(
 
 sessions = TinderSessionManager()
 web_sessions: dict[str, object] = {}
+web_session_cities: dict[str, str] = {}
 
 
 class TokenAuthRequest(BaseModel):
@@ -75,6 +77,7 @@ def authenticate_with_token(payload: TokenAuthRequest):
         client.authenticate_with_token(payload.token)
     except Exception as exc:
         web_sessions.pop(session_id, None)
+        web_session_cities.pop(session_id, None)
         raise HTTPException(status_code=401, detail=str(exc)) from exc
     return {"session_token": session_id}
 
@@ -137,22 +140,36 @@ def swipe(action: str, user_id: str, client=Depends(get_client)):
 
 
 @app.post("/api/v1/autoswipe")
-def autoswipe(client=Depends(get_client)):
-    before = MatchService(client).snapshot()
-    recommendations = RecommendationService(client).get_batch()
-    result = SwipeService(client, RecommendationService(client)).run(recommendations)
-    after = MatchService(client).snapshot()
-    stats = MatchService(client).calculate(before, after)
+def autoswipe(
+    authorization: Optional[str] = Header(default=None),
+    client=Depends(get_client),
+):
+    session_id = authorization.removeprefix("Bearer ").strip()
+    city = web_session_cities.get(session_id)
+    if not city:
+        raise HTTPException(
+            status_code=400,
+            detail="City must be selected before AutoSwipe",
+        )
+
+    recommendations = RecommendationService(client)
+    result = AutoSwipeService(
+        location_service=LocationService(client),
+        recommendation_service=recommendations,
+        match_service=MatchService(client),
+        swipe_service=SwipeService(client, recommendations),
+    ).run(city)
+
     return {
-        "swipes": result.swipes,
-        "likes": result.likes,
-        "dislikes": result.dislikes,
-        "limit_reached": result.limit_reached,
-        "recommendations_exhausted": result.recommendations_exhausted,
+        "swipes": result.swipe_result.swipes,
+        "likes": result.swipe_result.likes,
+        "dislikes": result.swipe_result.dislikes,
+        "limit_reached": result.swipe_result.limit_reached,
+        "recommendations_exhausted": result.swipe_result.recommendations_exhausted,
         "recommendations_received": result.recommendations_received,
-        "matches_before": stats.before,
-        "matches_after": stats.after,
-        "new_matches": stats.new_matches,
+        "matches_before": result.match_stats.before,
+        "matches_after": result.match_stats.after,
+        "new_matches": result.match_stats.new_matches,
     }
 
 
@@ -162,8 +179,14 @@ def matches_count(client=Depends(get_client)):
 
 
 @app.post("/api/v1/location")
-def set_location(payload: LocationRequest, client=Depends(get_client)):
+def set_location(
+    payload: LocationRequest,
+    authorization: Optional[str] = Header(default=None),
+    client=Depends(get_client),
+):
     location = LocationService(client).set_city(payload.city)
+    session_id = authorization.removeprefix("Bearer ").strip()
+    web_session_cities[session_id] = payload.city
     return {
         "city": payload.city,
         "address": location.address,
