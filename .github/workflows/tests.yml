@@ -30,5 +30,8 @@ jobs:
           pip install -r requirements.txt
           pip install pytest pytest-asyncio
 
+      - name: Verify web runtime
+        run: python -c "import uvicorn; from app.api import app; print(app.title)"
+
       - name: Run tests
         run: pytest -q
