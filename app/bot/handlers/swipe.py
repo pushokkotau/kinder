@@ -7,19 +7,18 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from app.bot.keyboards import main_keyboard
+from app.bot.services import TelegramServiceProvider
 from app.bot.states import MainStates
-from app.services.factory import ServiceFactory
-from app.services.session import TinderSessionManager
 from app.tinder.client import TinderAPIError
 
 
-def create_router(sessions: TinderSessionManager) -> Router:
+def create_router(services_provider: TelegramServiceProvider) -> Router:
     router = Router()
 
     @router.message(F.text == "Запустить AutoSwipe")
     async def swipe_start(message: Message, state: FSMContext):
         try:
-            sessions.get_authenticated_client(message.from_user.id)
+            services_provider.for_message(message, authenticated=True)
         except TinderAPIError as exc:
             await message.answer(f"Сначала авторизуй Tinder: {exc}")
             return
@@ -39,7 +38,10 @@ def create_router(sessions: TinderSessionManager) -> Router:
             return
 
         try:
-            client = sessions.get_authenticated_client(message.from_user.id)
+            services = services_provider.for_message(
+                message,
+                authenticated=True,
+            )
         except TinderAPIError as exc:
             await state.clear()
             await message.answer(f"Сначала авторизуй Tinder: {exc}")
@@ -47,7 +49,6 @@ def create_router(sessions: TinderSessionManager) -> Router:
 
         await state.set_state(MainStates.swiping)
 
-        services = ServiceFactory.for_client(client)
         service = services.autoswipe
 
         await message.answer("Запускаю AutoSwipe...")
@@ -72,14 +73,14 @@ def create_router(sessions: TinderSessionManager) -> Router:
         )
 
         await message.answer(
-            f"AutoSwipe завершён.\\n\\n"
-            f"Город: {result.location.address or city}\\n"
-            f"Получено рекомендаций: {result.recommendations_received}\\n"
-            f"Свайпов выполнено: {swipe.swipes}\\n"
-            f"Лайков: {swipe.likes}\\n"
-            f"Дизлайков: {swipe.dislikes}\\n"
-            f"Новых матчей: {matches.new_matches}\\n"
-            f"Всего матчей: {matches.after}\\n"
+            f"AutoSwipe завершён.\n\n"
+            f"Город: {result.location.address or city}\n"
+            f"Получено рекомендаций: {result.recommendations_received}\n"
+            f"Свайпов выполнено: {swipe.swipes}\n"
+            f"Лайков: {swipe.likes}\n"
+            f"Дизлайков: {swipe.dislikes}\n"
+            f"Новых матчей: {matches.new_matches}\n"
+            f"Всего матчей: {matches.after}\n"
             f"Статус: {status}",
             reply_markup=main_keyboard(),
         )

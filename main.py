@@ -5,18 +5,19 @@ from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 
 from app.bot.handlers import auth, profile, start, swipe
+from app.bot.services import TelegramServiceProvider
 from app.services.session import TinderSessionManager
 
 
 def create_dispatcher() -> Dispatcher:
     storage = MemoryStorage()
     dp = Dispatcher(storage=storage)
-    sessions = TinderSessionManager()
+    services_provider = TelegramServiceProvider(TinderSessionManager())
 
     dp.include_router(start.router)
-    dp.include_router(auth.create_router(sessions))
-    dp.include_router(profile.create_router(sessions))
-    dp.include_router(swipe.create_router(sessions))
+    dp.include_router(auth.create_router(services_provider))
+    dp.include_router(profile.create_router(services_provider))
+    dp.include_router(swipe.create_router(services_provider))
 
     return dp
 
@@ -31,4 +32,4 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(main)

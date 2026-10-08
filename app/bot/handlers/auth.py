@@ -7,16 +7,9 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from app.bot.keyboards import main_keyboard
+from app.bot.services import TelegramServiceProvider
 from app.bot.states import AuthStates
-from app.services.factory import ServiceFactory
-from app.services.session import TinderSessionManager
 from app.tinder.client import TinderAPIError
-
-
-def _services(message: Message, sessions: TinderSessionManager):
-    client = sessions.get_client(message.from_user.id)
-    services = ServiceFactory.for_client(client)
-    return services.auth, services.profile
 
 
 async def phone_start(callback: CallbackQuery, state: FSMContext) -> None:
@@ -38,7 +31,7 @@ async def token_start(callback: CallbackQuery, state: FSMContext) -> None:
 async def phone_received(
     message: Message,
     state: FSMContext,
-    sessions: TinderSessionManager,
+    services_provider: TelegramServiceProvider,
 ) -> None:
     raw_phone = (message.text or "").strip()
     try:
@@ -55,9 +48,9 @@ async def phone_received(
         )
         return
 
-    auth, _ = _services(message, sessions)
+    services = services_provider.for_message(message)
     try:
-        await asyncio.to_thread(auth.request_phone_code, phone)
+        await asyncio.to_thread(services.auth.request_phone_code, phone)
     except TinderAPIError as exc:
         await message.answer(f"Не удалось запросить код Tinder: {exc}")
         return
@@ -70,7 +63,7 @@ async def phone_received(
 async def code_received(
     message: Message,
     state: FSMContext,
-    sessions: TinderSessionManager,
+    services_provider: TelegramServiceProvider,
 ) -> None:
     data = await state.get_data()
     phone = data.get("phone")
@@ -81,19 +74,19 @@ async def code_received(
         await message.answer("Сессия авторизации потеряна. Начни заново через /start.")
         return
 
-    auth, profile = _services(message, sessions)
+    services = services_provider.for_message(message)
     try:
-        await asyncio.to_thread(auth.authenticate_with_code, phone, code)
-        tinder_profile = await asyncio.to_thread(profile.get_profile)
+        await asyncio.to_thread(services.auth.authenticate_with_code, phone, code)
+        tinder_profile = await asyncio.to_thread(services.profile.get_profile)
     except TinderAPIError as exc:
         await message.answer(f"Не удалось завершить авторизацию: {exc}")
         return
 
     await state.clear()
     await message.answer(
-        f"Авторизация успешна!\\n"
-        f"Профиль: {tinder_profile.name}\\n"
-        f"Город: {tinder_profile.city}\\n"
+        f"Авторизация успешна!\n"
+        f"Профиль: {tinder_profile.name}\n"
+        f"Город: {tinder_profile.city}\n"
         f"Страна: {tinder_profile.country}",
         reply_markup=main_keyboard(),
     )
@@ -102,17 +95,17 @@ async def code_received(
 async def token_received(
     message: Message,
     state: FSMContext,
-    sessions: TinderSessionManager,
+    services_provider: TelegramServiceProvider,
 ) -> None:
     token = (message.text or "").strip()
     if not token:
         await message.answer("Token не должен быть пустым.")
         return
 
-    auth, profile = _services(message, sessions)
+    services = services_provider.for_message(message)
     try:
-        await asyncio.to_thread(auth.authenticate_with_token, token)
-        tinder_profile = await asyncio.to_thread(profile.get_profile)
+        await asyncio.to_thread(services.auth.authenticate_with_token, token)
+        tinder_profile = await asyncio.to_thread(services.profile.get_profile)
     except TinderAPIError as exc:
         await message.answer(
             f"Token не подошёл или Tinder API недоступен: {exc}"
@@ -121,15 +114,15 @@ async def token_received(
 
     await state.clear()
     await message.answer(
-        f"Авторизация успешна!\\n"
-        f"Профиль: {tinder_profile.name}\\n"
-        f"Город: {tinder_profile.city}\\n"
+        f"Авторизация успешна!\n"
+        f"Профиль: {tinder_profile.name}\n"
+        f"Город: {tinder_profile.city}\n"
         f"Страна: {tinder_profile.country}",
         reply_markup=main_keyboard(),
     )
 
 
-def create_router(sessions: TinderSessionManager) -> Router:
+def create_router(services_provider: TelegramServiceProvider) -> Router:
     router = Router()
 
     @router.callback_query(F.data == "auth:phone")
@@ -142,14 +135,14 @@ def create_router(sessions: TinderSessionManager) -> Router:
 
     @router.message(AuthStates.waiting_phone)
     async def phone_handler(message: Message, state: FSMContext):
-        await phone_received(message, state, sessions)
+        await phone_received(message, state, services_provider)
 
     @router.message(AuthStates.waiting_code)
     async def code_handler(message: Message, state: FSMContext):
-        await code_received(message, state, sessions)
+        await code_received(message, state, services_provider)
 
     @router.message(AuthStates.waiting_test_token)
     async def token_handler(message: Message, state: FSMContext):
-        await token_received(message, state, sessions)
+        await token_received(message, state, services_provider)
 
     return router
