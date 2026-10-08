@@ -1,8 +1,7 @@
 import time
-
-from config import get_session_ttl_seconds, get_tinder_api_mode
 from collections.abc import Hashable
 
+from config import get_session_ttl_seconds, get_tinder_api_mode
 from app.tinder.client import TinderAPIError, TinderClient
 from app.tinder.fake_client import FakeTinderClient
 
@@ -43,7 +42,9 @@ class TinderSessionManager:
         return self._clients[user_id]
 
     def get_authenticated_client(self, user_id: Hashable) -> TinderClient:
-        client = self.get_client(user_id)
+        client = self.find_client(user_id)
+        if client is None:
+            raise TinderAPIError("Tinder session not found or expired.")
         if not client.is_authenticated:
             raise TinderAPIError("Tinder user is not authenticated.")
         return client
