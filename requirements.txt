@@ -1,7 +1,6 @@
 aiogram==3.31.0
 fastapi==0.118.0
 httpx==0.28.1
-geocoder==1.38.1
 geopy==2.5.0
 phonenumbers==9.0.39
 requests==2.34.2
