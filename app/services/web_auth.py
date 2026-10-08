@@ -60,7 +60,7 @@ class WebAuthService:
         state = self.web_sessions.get(session_id)
         if state:
             state.phones.discard(phone)
-        self.web_sessions._phone_sessions.pop(phone, None)
+        self.web_sessions.unbind_phone(phone)
         return session_id, token
 
     def get_authenticated_client(self, session_id: str) -> TinderClient:
