@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from app.api import (
+from app.tinder.client import TinderAPIError\n\nfrom app.api import (
     app,
     sessions,
     web_sessions,
@@ -152,9 +152,9 @@ def test_logout_rejects_unknown_session():
     assert response.status_code == 401
 
 
-def test_token_auth_does_not_hide_unexpected_errors(monkeypatch):
+def test_token_auth_maps_tinder_api_error_to_401(monkeypatch):
     def fail_authenticate(self, token):
-        raise RuntimeError("unexpected")
+        raise TinderAPIError("invalid token")
 
     monkeypatch.setattr(
         "app.api.TinderClient.authenticate_with_token",
@@ -163,12 +163,13 @@ def test_token_auth_does_not_hide_unexpected_errors(monkeypatch):
 
     response = client.post("/api/v1/auth/token", json={"token": "test-token"})
 
-    assert response.status_code == 500
+    assert response.status_code == 401
+    assert response.json()["detail"] == "invalid token"
 
 
-def test_phone_auth_does_not_hide_unexpected_errors(monkeypatch):
+def test_phone_auth_maps_tinder_api_error_to_400(monkeypatch):
     def fail_request(self, phone):
-        raise RuntimeError("unexpected")
+        raise TinderAPIError("invalid phone")
 
     monkeypatch.setattr(
         "app.api.TinderClient.request_auth_phone",
@@ -177,4 +178,5 @@ def test_phone_auth_does_not_hide_unexpected_errors(monkeypatch):
 
     response = client.post("/api/v1/auth/phone", json={"phone": "+31612345678"})
 
-    assert response.status_code == 500
+    assert response.status_code == 400
+    assert response.json()["detail"] == "invalid phone"
