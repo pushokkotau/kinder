@@ -18,6 +18,8 @@ class LocationService:
         location = self.geolocator.geocode(city)
         if location is None:
             raise ValueError(f"City not found: {city}")
+        if getattr(location, "raw", {}).get("type") not in {"city", "town", "village", "municipality"}:
+            raise ValueError(f"City not found: {city}")
         return self.set_location(location)
 
     def set_location(self, location: GeopyLocation) -> Location:
