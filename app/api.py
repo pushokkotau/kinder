@@ -12,6 +12,8 @@ from app.services.swipe import SwipeService
 from app.services.profile import ProfileService
 from app.services.recommendations import RecommendationService
 from app.services.session import TinderSessionManager
+from app.tinder.client import TinderClient
+from app.tinder.models import Recommendation
 
 app = FastAPI(title="Kinder API", version="1.0.0")
 
@@ -55,7 +57,7 @@ def get_session_id(authorization: Optional[str]) -> str:
     return session_id
 
 
-def get_client(authorization: Optional[str] = Header(default=None)):
+def get_client(authorization: Optional[str] = Header(default=None)) -> TinderClient:
     session_id = get_session_id(authorization)
     client = sessions.find_client(session_id)
     if client is None:
@@ -65,19 +67,19 @@ def get_client(authorization: Optional[str] = Header(default=None)):
     return client
 
 
-def create_web_session() -> tuple[str, object]:
+def create_web_session() -> tuple[str, TinderClient]:
     session_id = uuid4().hex
     client = sessions.get_client(session_id)
     return session_id, client
 
 
 @app.get("/api/v1/health")
-def health():
+def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
 @app.post("/api/v1/auth/token")
-def authenticate_with_token(payload: TokenAuthRequest):
+def authenticate_with_token(payload: TokenAuthRequest) -> dict[str, str]:
     session_id, client = create_web_session()
     try:
         client.authenticate_with_token(payload.token)
@@ -89,7 +91,7 @@ def authenticate_with_token(payload: TokenAuthRequest):
 
 
 @app.post("/api/v1/auth/phone")
-def request_phone_code(payload: PhoneAuthRequest):
+def request_phone_code(payload: PhoneAuthRequest) -> dict[str, object]:
     session_id, client = create_web_session()
     try:
         client.request_auth_phone(payload.phone)
@@ -101,7 +103,7 @@ def request_phone_code(payload: PhoneAuthRequest):
 
 
 @app.post("/api/v1/auth/phone/verify")
-def verify_phone_code(payload: CodeAuthRequest):
+def verify_phone_code(payload: CodeAuthRequest) -> dict[str, str]:
     session_id = web_phone_sessions.get(payload.phone)
     if session_id is None:
         raise HTTPException(status_code=401, detail="Phone authentication session not found")
@@ -121,12 +123,12 @@ def verify_phone_code(payload: CodeAuthRequest):
 
 
 @app.get("/api/v1/profile")
-def profile(client=Depends(get_client)):
+def profile(client: TinderClient = Depends(get_client)) -> dict[str, str]:
     result = ProfileService(client).get_profile()
     return {"name": result.name, "city": result.city, "country": result.country}
 
 
-def serialize_recommendation(recommendation):
+def serialize_recommendation(recommendation: Recommendation) -> dict[str, object]:
     return {
         "id": recommendation.user.id,
         "name": recommendation.user.name,
@@ -136,13 +138,13 @@ def serialize_recommendation(recommendation):
 
 
 @app.get("/api/v1/recommendations")
-def recommendations(client=Depends(get_client)):
+def recommendations(client: TinderClient = Depends(get_client)) -> dict[str, list[dict[str, object]]]:
     items = RecommendationService(client).get_batch()
     return {"recommendations": [serialize_recommendation(item) for item in items]}
 
 
 @app.post("/api/v1/swipes/{action}/{user_id}")
-def swipe(action: str, user_id: str, client=Depends(get_client)):
+def swipe(action: str, user_id: str, client: TinderClient = Depends(get_client)) -> dict[str, str]:
     if action not in {"like", "dislike"}:
         raise HTTPException(status_code=400, detail="Action must be like or dislike")
 
@@ -157,8 +159,8 @@ def swipe(action: str, user_id: str, client=Depends(get_client)):
 @app.post("/api/v1/autoswipe")
 def autoswipe(
     authorization: Optional[str] = Header(default=None),
-    client=Depends(get_client),
-):
+    client: TinderClient = Depends(get_client),
+) -> dict[str, int | bool]:
     session_id = get_session_id(authorization)
     city = web_session_cities.get(session_id)
     if not city:
@@ -189,7 +191,7 @@ def autoswipe(
 
 
 @app.get("/api/v1/matches/count")
-def matches_count(client=Depends(get_client)):
+def matches_count(client: TinderClient = Depends(get_client)) -> dict[str, int]:
     return {"count": MatchService(client).get_count()}
 
 
@@ -197,8 +199,8 @@ def matches_count(client=Depends(get_client)):
 def set_location(
     payload: LocationRequest,
     authorization: Optional[str] = Header(default=None),
-    client=Depends(get_client),
-):
+    client: TinderClient = Depends(get_client),
+) -> dict[str, str | float]:
     location = LocationService(client).set_city(payload.city)
     session_id = get_session_id(authorization)
     web_session_cities[session_id] = payload.city

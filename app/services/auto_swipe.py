@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Any
 
+from app.services.location import LocationService
 from app.services.matches import MatchService
 from app.services.recommendations import RecommendationService
 from app.services.swipe import SwipeService
@@ -20,7 +21,7 @@ class AutoSwipeService:
 
     def __init__(
         self,
-        location_service,
+        location_service: LocationService,
         recommendation_service: RecommendationService,
         match_service: MatchService,
         swipe_service: SwipeService,

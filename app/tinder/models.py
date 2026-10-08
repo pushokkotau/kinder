@@ -1,20 +1,20 @@
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 @dataclass(frozen=True)
 class TinderUser:
     id: str
     name: str
-    photos: List[Dict[str, Any]]
-    raw: Dict[str, Any]
+    photos: list[dict[str, Any]]
+    raw: dict[str, Any]
 
 
 @dataclass(frozen=True)
 class Recommendation:
     user: TinderUser
-    s_number: Optional[int]
-    raw: Dict[str, Any]
+    s_number: int | None
+    raw: dict[str, Any]
 
 
 @dataclass(frozen=True)
