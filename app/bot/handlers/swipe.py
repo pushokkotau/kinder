@@ -7,11 +7,7 @@ from aiogram.types import Message
 from app.bot.keyboards import main_keyboard
 from app.bot.states import MainStates
 from app.services.auto_swipe import AutoSwipeService
-from app.services.location import LocationService
-from app.services.matches import MatchService
-from app.services.recommendations import RecommendationService
 from app.services.session import TinderSessionManager
-from app.services.swipe import SwipeService
 
 
 def create_router(sessions: TinderSessionManager) -> Router:
@@ -48,13 +44,7 @@ def create_router(sessions: TinderSessionManager) -> Router:
 
         await state.set_state(MainStates.swiping)
 
-        recommendation_service = RecommendationService(client)
-        service = AutoSwipeService(
-            location_service=LocationService(client),
-            recommendation_service=recommendation_service,
-            match_service=MatchService(client),
-            swipe_service=SwipeService(client, recommendation_service),
-        )
+        service = AutoSwipeService.for_client(client)
 
         await message.answer("Запускаю AutoSwipe...")
 
