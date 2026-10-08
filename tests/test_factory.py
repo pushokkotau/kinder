@@ -1,5 +1,6 @@
 import pytest
 
+from app.services.auto_swipe import AutoSwipeService
 from app.services.factory import ClientServices, ServiceFactory
 from app.services.location import LocationService
 from app.services.matches import MatchService
@@ -25,6 +26,11 @@ def test_factory_builds_complete_client_service_graph():
     assert services.swipe.recommendations is services.recommendations
     assert services.location.client is client
     assert services.matches.client is client
+    assert isinstance(services.autoswipe, AutoSwipeService)
+    assert services.autoswipe.recommendations is services.recommendations
+    assert services.autoswipe.swipes is services.swipe
+    assert services.autoswipe.matches is services.matches
+    assert services.autoswipe.location_service.client is client
 
 
 def test_factory_returns_independent_service_graphs():
