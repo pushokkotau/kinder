@@ -1,6 +1,6 @@
 from typing import Callable, Optional
 
-from fastapi import APIRouter, Depends, Header
+from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 
 from app.services.factory import ClientServices
@@ -41,7 +41,6 @@ def create_location_router(
 
 def _get_session_id(authorization: Optional[str]) -> str:
     if not authorization or not authorization.startswith("Bearer "):
-        from fastapi import HTTPException
         raise HTTPException(status_code=401, detail="Missing Bearer token")
 
     session_id = authorization.removeprefix("Bearer ").strip()
