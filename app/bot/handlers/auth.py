@@ -10,6 +10,7 @@ from app.bot.keyboards import main_keyboard
 from app.bot.states import AuthStates
 from app.services.factory import ServiceFactory
 from app.services.session import TinderSessionManager
+from app.tinder.client import TinderAPIError
 
 
 def _services(message: Message, sessions: TinderSessionManager):
@@ -57,7 +58,7 @@ async def phone_received(
     auth, _ = _services(message, sessions)
     try:
         await asyncio.to_thread(auth.request_phone_code, phone)
-    except Exception as exc:
+    except TinderAPIError as exc:
         await message.answer(f"Не удалось запросить код Tinder: {exc}")
         return
 
@@ -84,7 +85,7 @@ async def code_received(
     try:
         await asyncio.to_thread(auth.authenticate_with_code, phone, code)
         tinder_profile = await asyncio.to_thread(profile.get_profile)
-    except Exception as exc:
+    except TinderAPIError as exc:
         await message.answer(f"Не удалось завершить авторизацию: {exc}")
         return
 
@@ -112,7 +113,7 @@ async def token_received(
     try:
         await asyncio.to_thread(auth.authenticate_with_token, token)
         tinder_profile = await asyncio.to_thread(profile.get_profile)
-    except Exception as exc:
+    except TinderAPIError as exc:
         await message.answer(
             f"Token не подошёл или Tinder API недоступен: {exc}"
         )
