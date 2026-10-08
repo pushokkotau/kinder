@@ -90,7 +90,7 @@ async def test_autoswipe_success_sends_summary(monkeypatch):
         ),
         match_stats=MatchStats(before=10, after=16),
         recommendations_received=12,
-        location={"address": "Amsterdam"},
+        location=SimpleNamespace(address="Amsterdam"),
     )
     service = SimpleNamespace(run=lambda city: result)
     services = SimpleNamespace(autoswipe=service)
