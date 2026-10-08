@@ -1,4 +1,5 @@
 from geopy import Nominatim
+from geopy.location import Location as GeopyLocation
 
 from app.tinder.client import TinderClient
 from app.tinder.models import Location
@@ -19,7 +20,7 @@ class LocationService:
             raise ValueError(f"City not found: {city}")
         return self.set_location(location)
 
-    def set_location(self, location) -> Location:
+    def set_location(self, location: GeopyLocation) -> Location:
         self.client.set_location(location.latitude, location.longitude)
         return Location(
             latitude=float(location.latitude),
