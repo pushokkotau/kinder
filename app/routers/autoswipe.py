@@ -1,9 +1,10 @@
-from typing import Callable, Optional
+from typing import Callable
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
-from app.services.web_session import WebSessionStateStore
+from app.dependencies import get_session_id
 from app.services.factory import ClientServices
+from app.services.web_session import WebSessionStateStore
 
 
 def create_autoswipe_router(
@@ -14,10 +15,9 @@ def create_autoswipe_router(
 
     @router.post("/api/v1/autoswipe")
     def autoswipe(
-        authorization: Optional[str] = Header(default=None),
+        session_id: str = Depends(get_session_id),
         services: ClientServices = Depends(get_services),
     ) -> dict[str, int | bool]:
-        session_id = _get_session_id(authorization)
         state = web_sessions.get(session_id)
         city = state.city if state else None
         if not city:
@@ -44,13 +44,3 @@ def create_autoswipe_router(
         }
 
     return router
-
-
-def _get_session_id(authorization: Optional[str]) -> str:
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing Bearer token")
-
-    session_id = authorization.removeprefix("Bearer ").strip()
-    if not session_id:
-        raise HTTPException(status_code=401, detail="Missing Bearer token")
-    return session_id
