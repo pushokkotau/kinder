@@ -1,5 +1,8 @@
+from app.tinder.client import TinderClient
+
+
 class AuthService:
-    def __init__(self, tinder_client):
+    def __init__(self, tinder_client: TinderClient):
         self.client = tinder_client
 
     def request_phone_code(self, phone: str) -> None:
