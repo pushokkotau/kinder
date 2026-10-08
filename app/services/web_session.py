@@ -1,11 +1,12 @@
 from dataclasses import dataclass, field
-from typing import Any
+
+from app.tinder.models import Location
 
 
 @dataclass
 class WebSessionState:
     city: str | None = None
-    location: Any | None = None
+    location: Location | None = None
     phones: set[str] = field(default_factory=set)
 
 
@@ -27,7 +28,7 @@ class WebSessionStateStore:
     def get_or_create(self, session_id: str) -> WebSessionState:
         return self._sessions.setdefault(session_id, WebSessionState())
 
-    def set_location(self, session_id: str, city: str, location: Any) -> None:
+    def set_location(self, session_id: str, city: str, location: Location) -> None:
         state = self.get_or_create(session_id)
         state.city = city
         state.location = location
