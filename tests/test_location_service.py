@@ -9,8 +9,10 @@ from app.tinder.models import Location
 class FakeGeolocator:
     def __init__(self, location):
         self.location = location
+        self.calls = []
 
-    def geocode(self, city):
+    def geocode(self, city, **kwargs):
+        self.calls.append((city, kwargs))
         return self.location
 
 
@@ -25,7 +27,7 @@ class FakeClient:
 def test_set_city_geocodes_city_and_updates_tinder_location():
     client = FakeClient()
     service = LocationService(client)
-    service.geolocator = FakeGeolocator(
+    geolocator = FakeGeolocator(
         SimpleNamespace(
             latitude=52.37,
             longitude=4.90,
@@ -33,6 +35,7 @@ def test_set_city_geocodes_city_and_updates_tinder_location():
             raw={"type": "city"},
         )
     )
+    service.geolocator = geolocator
 
     location = service.set_city("Amsterdam")
 
@@ -42,6 +45,31 @@ def test_set_city_geocodes_city_and_updates_tinder_location():
         address="Amsterdam, Netherlands",
     )
     assert client.coordinates == (52.37, 4.90)
+    assert geolocator.calls == [
+        ("Amsterdam", {"featuretype": "city", "addressdetails": True})
+    ]
+
+
+def test_set_city_accepts_administrative_city_result():
+    client = FakeClient()
+    service = LocationService(client)
+    service.geolocator = FakeGeolocator(
+        SimpleNamespace(
+            latitude=55.7558,
+            longitude=37.6173,
+            address="Moscow, Russia",
+            raw={"type": "administrative"},
+        )
+    )
+
+    location = service.set_city("Москва")
+
+    assert location == Location(
+        latitude=55.7558,
+        longitude=37.6173,
+        address="Moscow, Russia",
+    )
+    assert client.coordinates == (55.7558, 37.6173)
 
 
 def test_set_city_raises_when_city_cannot_be_found():
