@@ -149,3 +149,21 @@ def test_api_error_is_not_counted_as_successful_swipe():
         raise AssertionError("Expected Tinder API error")
 
     assert client.likes == []
+
+
+def test_single_like_is_delegated_to_client():
+    client = FakeSwipeClient()
+    service = SwipeService(client, FakeRecommendations([]))
+
+    service.like("user-1")
+
+    assert client.likes == ["user-1"]
+
+
+def test_single_dislike_is_delegated_to_client():
+    client = FakeSwipeClient()
+    service = SwipeService(client, FakeRecommendations([]))
+
+    service.dislike("user-1", 7)
+
+    assert client.dislikes == [("user-1", 7)]

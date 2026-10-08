@@ -18,6 +18,12 @@ class SwipeService:
         self.swipe_limit = swipe_limit
         self.delay_seconds = delay_seconds
 
+    def like(self, user_id: str) -> None:
+        self.client.like(user_id)
+
+    def dislike(self, user_id: str, s_number: int | None = None) -> None:
+        self.client.dislike(user_id, s_number)
+
     def run(self, first_batch: Iterable[Recommendation]) -> SwipeResult:
         swipes = likes = dislikes = 0
         recommendations_received = 0
