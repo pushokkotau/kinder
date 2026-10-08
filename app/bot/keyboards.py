@@ -9,15 +9,26 @@ from aiogram.types import (
 def start_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(
-                text="Авторизоваться по телефону",
-                callback_data="auth:phone",
-            )],
-            [InlineKeyboardButton(
-                text="Ввести Tinder token (тест)",
-                callback_data="auth:token",
-            )],
+            [
+                InlineKeyboardButton(
+                    text="Авторизоваться по телефону",
+                    callback_data="auth:phone",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="Ввести Tinder token (тест)",
+                    callback_data="auth:token",
+                )
+            ],
         ]
+    )
+
+
+def unauthenticated_keyboard() -> ReplyKeyboardMarkup:
+    return ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text="Авторизоваться")]],
+        resize_keyboard=True,
     )
 
 
