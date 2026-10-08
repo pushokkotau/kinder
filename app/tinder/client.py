@@ -174,7 +174,7 @@ class TinderClient:
             path = f"/v2/matches?locale={self.locale}&count=100&is_tinder_u=false"
             if page_token:
                 path += f"&page_token={page_token}"
-            data = self._request("GET", path).json().get("data", {})
+            data = self._json(self._request("GET", path)).get("data", {})
             matches.extend(data.get("matches", []))
             page_token = data.get("next_page_token")
             if not page_token:
