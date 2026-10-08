@@ -2,13 +2,12 @@ from typing import Callable, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 
-from app.services.auto_swipe import AutoSwipeService
 from app.services.web_session import WebSessionStateStore
-from app.tinder.client import TinderClient
+from app.services.factory import ClientServices
 
 
 def create_autoswipe_router(
-    get_client: Callable[..., TinderClient],
+    get_services: Callable[..., ClientServices],
     web_sessions: WebSessionStateStore,
 ) -> APIRouter:
     router = APIRouter()
@@ -16,7 +15,7 @@ def create_autoswipe_router(
     @router.post("/api/v1/autoswipe")
     def autoswipe(
         authorization: Optional[str] = Header(default=None),
-        client: TinderClient = Depends(get_client),
+        services: ClientServices = Depends(get_services),
     ) -> dict[str, int | bool]:
         session_id = _get_session_id(authorization)
         state = web_sessions.get(session_id)
@@ -27,7 +26,7 @@ def create_autoswipe_router(
                 detail="City must be selected before AutoSwipe",
             )
 
-        result = AutoSwipeService.for_client(client).run(
+        result = services.autoswipe.run(
             city,
             resolved_location=state.location if state else None,
         )
