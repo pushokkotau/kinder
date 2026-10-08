@@ -7,12 +7,12 @@ from pydantic import BaseModel, Field
 from app.services.auto_swipe import AutoSwipeService
 from app.routers.auth import create_auth_router
 from app.routers.profile import create_profile_router
+from app.routers.recommendations import create_recommendations_router
 from app.services.web_auth import WebAuthService
 from app.services.web_session import WebSessionStateStore
 from app.services.factory import ClientServices, ServiceFactory
 from app.services.session import TinderSessionManager
 from app.tinder.client import TinderAPIError, TinderClient
-from app.tinder.models import Recommendation
 from config import get_web_allowed_origins
 
 app = FastAPI(title="Kinder API", version="1.0.0")
@@ -75,20 +75,8 @@ def get_services(client: TinderClient = Depends(get_client)) -> ClientServices:
 app.include_router(create_profile_router(get_services))
 
 
-def serialize_recommendation(recommendation: Recommendation) -> dict[str, object]:
-    return {
-        "id": recommendation.user.id,
-        "name": recommendation.user.name,
-        "photos": recommendation.user.photos,
-        "s_number": recommendation.s_number,
-    }
 
-
-@app.get("/api/v1/recommendations")
-def recommendations(services: ClientServices = Depends(get_services)) -> dict[str, list[dict[str, object]]]:
-    items = services.recommendations.get_batch()
-    return {"recommendations": [serialize_recommendation(item) for item in items]}
-
+app.include_router(create_recommendations_router(get_services))
 
 @app.post("/api/v1/swipes/{action}/{user_id}")
 def swipe(action: str, user_id: str, services: ClientServices = Depends(get_services)) -> dict[str, str]:
