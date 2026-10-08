@@ -3,6 +3,7 @@ from types import SimpleNamespace
 import pytest
 
 from app.services.location import LocationService
+from app.tinder.models import Location
 
 
 class FakeGeolocator:
@@ -25,13 +26,20 @@ def test_set_city_geocodes_city_and_updates_tinder_location():
     client = FakeClient()
     service = LocationService(client)
     service.geolocator = FakeGeolocator(
-        SimpleNamespace(latitude=52.37, longitude=4.90)
+        SimpleNamespace(
+            latitude=52.37,
+            longitude=4.90,
+            address="Amsterdam, Netherlands",
+        )
     )
 
     location = service.set_city("Amsterdam")
 
-    assert location.latitude == 52.37
-    assert location.longitude == 4.90
+    assert location == Location(
+        latitude=52.37,
+        longitude=4.90,
+        address="Amsterdam, Netherlands",
+    )
     assert client.coordinates == (52.37, 4.90)
 
 
@@ -42,3 +50,22 @@ def test_set_city_raises_when_city_cannot_be_found():
 
     with pytest.raises(ValueError, match="City not found: Atlantis"):
         service.set_city("Atlantis")
+
+
+def test_set_location_converts_geopy_location_to_domain_model():
+    client = FakeClient()
+    service = LocationService(client)
+    geocoded = SimpleNamespace(
+        latitude=52.3702,
+        longitude=4.8952,
+        address="Amsterdam, Netherlands",
+    )
+
+    location = service.set_location(geocoded)
+
+    assert location == Location(
+        latitude=52.3702,
+        longitude=4.8952,
+        address="Amsterdam, Netherlands",
+    )
+    assert client.coordinates == (52.3702, 4.8952)
