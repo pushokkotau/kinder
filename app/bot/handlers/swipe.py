@@ -1,5 +1,7 @@
 import asyncio
 
+from geopy.exc import GeocoderServiceError
+
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
@@ -8,6 +10,7 @@ from app.bot.keyboards import main_keyboard
 from app.bot.states import MainStates
 from app.services.factory import ServiceFactory
 from app.services.session import TinderSessionManager
+from app.tinder.client import TinderAPIError
 
 
 def create_router(sessions: TinderSessionManager) -> Router:
@@ -17,7 +20,7 @@ def create_router(sessions: TinderSessionManager) -> Router:
     async def swipe_start(message: Message, state: FSMContext):
         try:
             sessions.get_authenticated_client(message.from_user.id)
-        except Exception as exc:
+        except TinderAPIError as exc:
             await message.answer(f"Сначала авторизуй Tinder: {exc}")
             return
 
@@ -37,7 +40,7 @@ def create_router(sessions: TinderSessionManager) -> Router:
 
         try:
             client = sessions.get_authenticated_client(message.from_user.id)
-        except Exception as exc:
+        except TinderAPIError as exc:
             await state.clear()
             await message.answer(f"Сначала авторизуй Tinder: {exc}")
             return
@@ -51,7 +54,7 @@ def create_router(sessions: TinderSessionManager) -> Router:
 
         try:
             result = await asyncio.to_thread(service.run, city)
-        except Exception as exc:
+        except (TinderAPIError, ValueError, GeocoderServiceError) as exc:
             await state.clear()
             await message.answer(
                 f"AutoSwipe не удалось завершить: {exc}",
