@@ -1,8 +1,10 @@
 from geopy import Nominatim
 
+from app.tinder.client import TinderClient
+
 
 class LocationService:
-    def __init__(self, tinder_client, user_agent: str = "tinder-refactor"):
+    def __init__(self, tinder_client: TinderClient, user_agent: str = "tinder-refactor"):
         self.client = tinder_client
         self.geolocator = Nominatim(user_agent=user_agent)
 

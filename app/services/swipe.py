@@ -2,14 +2,16 @@ import time
 from typing import Iterable, Set
 
 from config import SWIPE_LIMIT
+from app.services.recommendations import RecommendationService
+from app.tinder.client import TinderClient
 from app.tinder.models import Recommendation, SwipeResult
 
 
 class SwipeService:
     def __init__(
         self,
-        tinder_client,
-        recommendation_service,
+        tinder_client: TinderClient,
+        recommendation_service: RecommendationService,
         swipe_limit: int = SWIPE_LIMIT,
         delay_seconds: float = 0.0,
     ):

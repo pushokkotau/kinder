@@ -1,8 +1,9 @@
+from app.tinder.client import TinderClient
 from app.tinder.models import MatchStats
 
 
 class MatchService:
-    def __init__(self, tinder_client):
+    def __init__(self, tinder_client: TinderClient):
         self.client = tinder_client
 
     def get_count(self) -> int:
