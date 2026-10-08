@@ -1,5 +1,6 @@
 import pytest
 
+from app.services.factory import ServiceFactory
 from app.services.session import TinderSessionManager
 from app.services.web_auth import WebAuthService
 from app.services.web_session import WebSessionStateStore
@@ -8,6 +9,31 @@ from app.tinder.client import TinderAPIError
 
 def make_service():
     return WebAuthService(TinderSessionManager(), WebSessionStateStore())
+
+
+def test_web_auth_delegates_authentication_to_service_factory(monkeypatch):
+    monkeypatch.setenv("TINDER_API_MODE", "fake")
+    service = make_service()
+    calls = []
+
+    class FakeAuth:
+        def authenticate_with_token(self, token):
+            calls.append(("token", token))
+
+    class FakeServices:
+        auth = FakeAuth()
+
+    def for_client(client):
+        calls.append(("client", client))
+        return FakeServices()
+
+    monkeypatch.setattr(ServiceFactory, "for_client", staticmethod(for_client))
+
+    session_id = service.authenticate_with_token("test-token")
+
+    assert calls[0][0] == "client"
+    assert calls[0][1] is service.sessions.find_client(session_id)
+    assert calls[1] == ("token", "test-token")
 
 
 def test_token_auth_creates_authenticated_web_session(monkeypatch):
