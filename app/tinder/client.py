@@ -129,9 +129,9 @@ class TinderClient:
         )
 
     def get_recommendations(self) -> list[Recommendation]:
-        data = self._request(
-            "GET", f"/v2/recs/core?locale={self.locale}"
-        ).json().get("data", {})
+        data = self._json(
+            self._request("GET", f"/v2/recs/core?locale={self.locale}")
+        ).get("data", {})
         recommendations = []
         for item in data.get("results", []):
             user = item.get("user", {})
