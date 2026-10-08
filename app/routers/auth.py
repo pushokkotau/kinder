@@ -1,22 +1,44 @@
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.dependencies import get_session_id
 from app.services.web_auth import WebAuthService
 from app.tinder.client import TinderAPIError
 
 
+def _require_non_blank(value: str) -> str:
+    value = value.strip()
+    if not value:
+        raise ValueError("Value must not be blank")
+    return value
+
+
 class TokenAuthRequest(BaseModel):
     token: str = Field(min_length=1)
+
+    @field_validator("token")
+    @classmethod
+    def validate_token(cls, value: str) -> str:
+        return _require_non_blank(value)
 
 
 class PhoneAuthRequest(BaseModel):
     phone: str = Field(min_length=1)
 
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, value: str) -> str:
+        return _require_non_blank(value)
+
 
 class CodeAuthRequest(BaseModel):
     phone: str = Field(min_length=1)
     code: str = Field(min_length=1)
+
+    @field_validator("phone", "code")
+    @classmethod
+    def validate_value(cls, value: str) -> str:
+        return _require_non_blank(value)
 
 
 def create_auth_router(web_auth: WebAuthService) -> APIRouter:
