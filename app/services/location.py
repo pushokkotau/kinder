@@ -10,5 +10,9 @@ class LocationService:
         location = self.geolocator.geocode(city)
         if location is None:
             raise ValueError(f"City not found: {city}")
+        self.set_location(location)
+        return location
+
+    def set_location(self, location):
         self.client.set_location(location.latitude, location.longitude)
         return location

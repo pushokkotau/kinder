@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional
 from uuid import uuid4
 
 from fastapi import Depends, FastAPI, Header, HTTPException
@@ -27,6 +27,7 @@ app.add_middleware(
 
 sessions = TinderSessionManager()
 web_session_cities: dict[str, str] = {}
+web_session_locations: dict[str, Any] = {}
 web_phone_sessions: dict[str, str] = {}
 
 
@@ -60,6 +61,7 @@ def get_session_id(authorization: Optional[str]) -> str:
 def remove_web_session(session_id: str) -> None:
     sessions.remove(session_id)
     web_session_cities.pop(session_id, None)
+    web_session_locations.pop(session_id, None)
 
     for phone, mapped_session_id in list(web_phone_sessions.items()):
         if mapped_session_id == session_id:
@@ -193,7 +195,7 @@ def autoswipe(
         recommendation_service=recommendations,
         match_service=MatchService(client),
         swipe_service=SwipeService(client, recommendations),
-    ).run(city)
+    ).run(city, resolved_location=web_session_locations.get(session_id))
 
     return {
         "swipes": result.swipe_result.swipes,
@@ -222,6 +224,7 @@ def set_location(
     location = LocationService(client).set_city(payload.city)
     session_id = get_session_id(authorization)
     web_session_cities[session_id] = payload.city
+    web_session_locations[session_id] = location
     return {
         "city": payload.city,
         "address": location.address,

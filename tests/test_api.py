@@ -1,6 +1,12 @@
 from fastapi.testclient import TestClient
 
-from app.api import app, sessions, web_phone_sessions, web_session_cities
+from app.api import (
+    app,
+    sessions,
+    web_phone_sessions,
+    web_session_cities,
+    web_session_locations,
+)
 
 
 client = TestClient(app)
@@ -39,6 +45,7 @@ def test_invalid_session_does_not_create_client():
 def test_frontend_flow_with_fake_api(monkeypatch):
     monkeypatch.setenv("TINDER_API_MODE", "fake")
     web_session_cities.clear()
+    web_session_locations.clear()
     web_phone_sessions.clear()
 
     token = authenticate()
@@ -76,8 +83,9 @@ def test_invalid_swipe_action():
     assert response.status_code == 400
 
 
-def test_autoswipe_uses_complete_fake_match_flow(monkeypatch):
+def test_autoswipe_reuses_resolved_location(monkeypatch):
     web_session_cities.clear()
+    web_session_locations.clear()
     web_phone_sessions.clear()
 
     class FakeLocation:
@@ -85,13 +93,15 @@ def test_autoswipe_uses_complete_fake_match_flow(monkeypatch):
         latitude = 52.3676
         longitude = 4.9041
 
-    monkeypatch.setattr(
-        "app.api.LocationService.set_city",
-        lambda self, city: (
-            self.client.set_location(FakeLocation.latitude, FakeLocation.longitude),
-            FakeLocation(),
-        )[1],
-    )
+    geocode_calls = 0
+
+    def set_city(self, city):
+        nonlocal geocode_calls
+        geocode_calls += 1
+        self.client.set_location(FakeLocation.latitude, FakeLocation.longitude)
+        return FakeLocation()
+
+    monkeypatch.setattr("app.api.LocationService.set_city", set_city)
 
     token = authenticate()
     headers = {"Authorization": f"Bearer {token}"}
@@ -102,11 +112,13 @@ def test_autoswipe_uses_complete_fake_match_flow(monkeypatch):
         headers=headers,
     )
     assert location.status_code == 200
+    assert geocode_calls == 1
 
     result = client.post("/api/v1/autoswipe", headers=headers)
     assert result.status_code == 200
     data = result.json()
 
+    assert geocode_calls == 1
     assert data["matches_before"] == 10
     assert data["matches_after"] == 16
     assert data["new_matches"] == 6
@@ -119,11 +131,13 @@ def test_autoswipe_uses_complete_fake_match_flow(monkeypatch):
 
 def test_logout_removes_web_session_state():
     web_session_cities.clear()
+    web_session_locations.clear()
     web_phone_sessions.clear()
 
     token = authenticate()
     headers = {"Authorization": f"Bearer {token}"}
     web_session_cities[token] = "Amsterdam"
+    web_session_locations[token] = object()
     web_phone_sessions["+31612345678"] = token
 
     response = client.post("/api/v1/auth/logout", headers=headers)
@@ -132,6 +146,7 @@ def test_logout_removes_web_session_state():
     assert response.json() == {"status": "logged_out"}
     assert sessions.find_client(token) is None
     assert token not in web_session_cities
+    assert token not in web_session_locations
     assert token not in web_phone_sessions.values()
 
 
