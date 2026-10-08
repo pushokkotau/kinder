@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from app.services.factory import ServiceFactory
+from app.services.auth import AuthService
 from app.services.session import TinderSessionManager
 from app.services.web_session import WebSessionState, WebSessionStateStore
 from app.tinder.client import TinderAPIError, TinderClient
@@ -17,6 +17,10 @@ class WebAuthService:
         self.sessions = sessions
         self.web_sessions = web_sessions
 
+    @staticmethod
+    def _auth_service(client: TinderClient) -> AuthService:
+        return AuthService(client)
+
     def create_web_session(self) -> tuple[str, TinderClient]:
         session_id = uuid4().hex
         client = self.sessions.get_client(session_id)
@@ -26,7 +30,7 @@ class WebAuthService:
     def authenticate_with_token(self, token: str) -> str:
         session_id, client = self.create_web_session()
         try:
-            ServiceFactory.for_client(client).auth.authenticate_with_token(token)
+            self._auth_service(client).authenticate_with_token(token)
         except (TinderAPIError, ValueError):
             self.remove_session(session_id)
             raise
@@ -35,7 +39,7 @@ class WebAuthService:
     def request_phone_code(self, phone: str) -> str:
         session_id, client = self.create_web_session()
         try:
-            ServiceFactory.for_client(client).auth.request_phone_code(phone)
+            self._auth_service(client).request_phone_code(phone)
         except (TinderAPIError, ValueError):
             self.remove_session(session_id)
             raise
@@ -52,10 +56,7 @@ class WebAuthService:
             self.web_sessions.remove(session_id)
             raise TinderAPIError("Phone authentication session not found")
 
-        try:
-            token = ServiceFactory.for_client(client).auth.authenticate_with_code(phone, code)
-        except (TinderAPIError, ValueError):
-            raise
+        token = self._auth_service(client).authenticate_with_code(phone, code)
 
         state = self.web_sessions.get(session_id)
         if state:
@@ -64,10 +65,7 @@ class WebAuthService:
         return session_id, token
 
     def get_authenticated_client(self, session_id: str) -> TinderClient:
-        try:
-            return self.sessions.get_authenticated_client(session_id)
-        except TinderAPIError:
-            raise
+        return self.sessions.get_authenticated_client(session_id)
 
     def get_web_state(self, session_id: str) -> WebSessionState | None:
         return self.web_sessions.get(session_id)
