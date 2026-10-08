@@ -9,6 +9,7 @@ from app.services.auto_swipe import AutoSwipeService
 from app.services.location import LocationService
 from app.services.matches import MatchService
 from app.services.web_session import WebSessionStateStore
+from app.services.swipe import SwipeService
 from app.services.profile import ProfileService
 from app.services.recommendations import RecommendationService
 from app.services.session import TinderSessionManager
@@ -164,6 +165,7 @@ def swipe(action: str, user_id: str, client: TinderClient = Depends(get_client))
     if action not in {"like", "dislike"}:
         raise HTTPException(status_code=400, detail="Action must be like or dislike")
 
+    swipe_service = SwipeService(client, recommendation_service=None)
     if action == "like":
         client.like(user_id)
     else:
