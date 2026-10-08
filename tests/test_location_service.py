@@ -30,6 +30,7 @@ def test_set_city_geocodes_city_and_updates_tinder_location():
             latitude=52.37,
             longitude=4.90,
             address="Amsterdam, Netherlands",
+            raw={"type": "city"},
         )
     )
 
