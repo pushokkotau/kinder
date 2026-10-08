@@ -44,7 +44,7 @@ class AutoSwipeService:
 
     def run(self, city: str, resolved_location: Any = None) -> AutoSwipeResult:
         location = (
-            self.location_service.set_location(resolved_location)
+            resolved_location
             if resolved_location is not None
             else self.location_service.set_city(city)
         )
