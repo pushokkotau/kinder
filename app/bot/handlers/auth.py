@@ -8,14 +8,14 @@ from aiogram.types import CallbackQuery, Message
 
 from app.bot.keyboards import main_keyboard
 from app.bot.states import AuthStates
-from app.services.auth import AuthService
-from app.services.profile import ProfileService
+from app.services.factory import ServiceFactory
 from app.services.session import TinderSessionManager
 
 
 def _services(message: Message, sessions: TinderSessionManager):
     client = sessions.get_client(message.from_user.id)
-    return AuthService(client), ProfileService(client)
+    services = ServiceFactory.for_client(client)
+    return services.auth, services.profile
 
 
 async def phone_start(callback: CallbackQuery, state: FSMContext) -> None:
