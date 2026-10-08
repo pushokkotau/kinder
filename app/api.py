@@ -24,8 +24,8 @@ app.add_middleware(
 )
 
 sessions = TinderSessionManager()
-web_sessions: dict[str, object] = {}
 web_session_cities: dict[str, str] = {}
+web_phone_sessions: dict[str, str] = {}
 
 
 class TokenAuthRequest(BaseModel):
@@ -45,12 +45,19 @@ class LocationRequest(BaseModel):
     city: str = Field(min_length=1)
 
 
-def get_client(authorization: Optional[str] = Header(default=None)):
+def get_session_id(authorization: Optional[str]) -> str:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing Bearer token")
 
     session_id = authorization.removeprefix("Bearer ").strip()
-    client = web_sessions.get(session_id)
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Missing Bearer token")
+    return session_id
+
+
+def get_client(authorization: Optional[str] = Header(default=None)):
+    session_id = get_session_id(authorization)
+    client = sessions.find_client(session_id)
     if client is None:
         raise HTTPException(status_code=401, detail="Invalid session token")
     if not client.is_authenticated:
@@ -61,7 +68,6 @@ def get_client(authorization: Optional[str] = Header(default=None)):
 def create_web_session() -> tuple[str, object]:
     session_id = uuid4().hex
     client = sessions.get_client(session_id)
-    web_sessions[session_id] = client
     return session_id, client
 
 
@@ -76,7 +82,7 @@ def authenticate_with_token(payload: TokenAuthRequest):
     try:
         client.authenticate_with_token(payload.token)
     except Exception as exc:
-        web_sessions.pop(session_id, None)
+        sessions.remove(session_id)
         web_session_cities.pop(session_id, None)
         raise HTTPException(status_code=401, detail=str(exc)) from exc
     return {"session_token": session_id}
@@ -88,21 +94,30 @@ def request_phone_code(payload: PhoneAuthRequest):
     try:
         client.request_auth_phone(payload.phone)
     except Exception as exc:
-        web_sessions.pop(session_id, None)
+        sessions.remove(session_id)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    web_phone_sessions[payload.phone] = session_id
     return {"session_token": session_id, "code_requested": True}
 
 
 @app.post("/api/v1/auth/phone/verify")
 def verify_phone_code(payload: CodeAuthRequest):
-    for session_id, client in web_sessions.items():
-        if getattr(client, "_phone", None) == payload.phone:
-            try:
-                token = client.authenticate_with_phone_code(payload.phone, payload.code)
-            except Exception as exc:
-                raise HTTPException(status_code=401, detail=str(exc)) from exc
-            return {"session_token": session_id, "tinder_token": token}
-    raise HTTPException(status_code=401, detail="Phone authentication session not found")
+    session_id = web_phone_sessions.get(payload.phone)
+    if session_id is None:
+        raise HTTPException(status_code=401, detail="Phone authentication session not found")
+
+    client = sessions.find_client(session_id)
+    if client is None:
+        web_phone_sessions.pop(payload.phone, None)
+        raise HTTPException(status_code=401, detail="Phone authentication session not found")
+
+    try:
+        token = client.authenticate_with_phone_code(payload.phone, payload.code)
+    except Exception as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+
+    web_phone_sessions.pop(payload.phone, None)
+    return {"session_token": session_id, "tinder_token": token}
 
 
 @app.get("/api/v1/profile")
@@ -144,7 +159,7 @@ def autoswipe(
     authorization: Optional[str] = Header(default=None),
     client=Depends(get_client),
 ):
-    session_id = authorization.removeprefix("Bearer ").strip()
+    session_id = get_session_id(authorization)
     city = web_session_cities.get(session_id)
     if not city:
         raise HTTPException(
@@ -185,7 +200,7 @@ def set_location(
     client=Depends(get_client),
 ):
     location = LocationService(client).set_city(payload.city)
-    session_id = authorization.removeprefix("Bearer ").strip()
+    session_id = get_session_id(authorization)
     web_session_cities[session_id] = payload.city
     return {
         "city": payload.city,
