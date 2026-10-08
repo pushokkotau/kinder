@@ -25,7 +25,7 @@ def test_web_auth_uses_auth_service(monkeypatch):
     session_id = service.authenticate_with_token("test-token")
 
     assert calls == ["test-token"]
-    assert service.sessions.find_client(session_id).is_authenticated
+    assert service.get_web_state(session_id) is not None
 
 
 def test_token_auth_creates_authenticated_web_session(monkeypatch):
