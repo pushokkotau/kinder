@@ -115,3 +115,33 @@ def test_autoswipe_uses_complete_fake_match_flow(monkeypatch):
     assert data["dislikes"] == 6
     assert data["recommendations_received"] == 12
     assert data["recommendations_exhausted"] is True
+
+
+def test_logout_removes_web_session_state():
+    web_session_cities.clear()
+    web_phone_sessions.clear()
+
+    token = authenticate()
+    headers = {"Authorization": f"Bearer {token}"}
+    web_session_cities[token] = "Amsterdam"
+    web_phone_sessions["+31612345678"] = token
+
+    response = client.post("/api/v1/auth/logout", headers=headers)
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "logged_out"}
+    assert sessions.find_client(token) is None
+    assert token not in web_session_cities
+    assert token not in web_phone_sessions.values()
+
+
+def test_logout_rejects_unknown_session():
+    session_id = "missing-session"
+    sessions.remove(session_id)
+
+    response = client.post(
+        "/api/v1/auth/logout",
+        headers={"Authorization": f"Bearer {session_id}"},
+    )
+
+    assert response.status_code == 401
