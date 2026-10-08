@@ -154,13 +154,20 @@ def test_logout_rejects_unknown_session():
     assert response.status_code == 401
 
 
-def test_token_auth_maps_tinder_api_error_to_401(monkeypatch):
-    def fail_authenticate(self, token):
+class FailingAuthClient:
+    is_authenticated = False
+
+    def authenticate_with_token(self, token):
         raise TinderAPIError("invalid token")
 
+    def request_auth_phone(self, phone):
+        raise TinderAPIError("invalid phone")
+
+
+def test_token_auth_maps_tinder_api_error_to_401(monkeypatch):
     monkeypatch.setattr(
-        "app.api.TinderClient.authenticate_with_token",
-        fail_authenticate,
+        "app.api.create_web_session",
+        lambda: ("test-session", FailingAuthClient()),
     )
 
     response = client.post("/api/v1/auth/token", json={"token": "test-token"})
@@ -170,12 +177,9 @@ def test_token_auth_maps_tinder_api_error_to_401(monkeypatch):
 
 
 def test_phone_auth_maps_tinder_api_error_to_400(monkeypatch):
-    def fail_request(self, phone):
-        raise TinderAPIError("invalid phone")
-
     monkeypatch.setattr(
-        "app.api.TinderClient.request_auth_phone",
-        fail_request,
+        "app.api.create_web_session",
+        lambda: ("test-session", FailingAuthClient()),
     )
 
     response = client.post("/api/v1/auth/phone", json={"phone": "+31612345678"})
