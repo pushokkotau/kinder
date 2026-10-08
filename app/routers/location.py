@@ -1,8 +1,9 @@
-from typing import Callable, Optional
+from typing import Callable
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
+from app.dependencies import get_session_id
 from app.services.factory import ClientServices
 from app.services.web_session import WebSessionStateStore
 from app.tinder.client import TinderClient
@@ -22,12 +23,11 @@ def create_location_router(
     @router.post("/api/v1/location")
     def set_location(
         payload: LocationRequest,
-        authorization: Optional[str] = Header(default=None),
+        session_id: str = Depends(get_session_id),
         client: TinderClient = Depends(get_client),
     ) -> dict[str, str | float]:
         services = get_services(client)
         location = services.location.set_city(payload.city)
-        session_id = _get_session_id(authorization)
         web_sessions.set_location(session_id, payload.city, location)
         return {
             "city": payload.city,
@@ -37,14 +37,3 @@ def create_location_router(
         }
 
     return router
-
-
-def _get_session_id(authorization: Optional[str]) -> str:
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing Bearer token")
-
-    session_id = authorization.removeprefix("Bearer ").strip()
-    if not session_id:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=401, detail="Missing Bearer token")
-    return session_id
