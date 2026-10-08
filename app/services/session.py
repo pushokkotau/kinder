@@ -1,5 +1,6 @@
-import os
 import time
+
+from config import SESSION_TTL_SECONDS, TINDER_API_MODE
 from collections.abc import Hashable
 
 from app.tinder.client import TinderAPIError, TinderClient
@@ -12,8 +13,8 @@ class TinderSessionManager:
     def __init__(self, ttl_seconds: float | None = None) -> None:
         self._clients: dict[Hashable, TinderClient] = {}
         self._last_seen: dict[Hashable, float] = {}
-        self._api_mode = os.getenv("TINDER_API_MODE", "fake").lower()
-        self._ttl_seconds = ttl_seconds if ttl_seconds is not None else float(os.getenv("SESSION_TTL_SECONDS", "3600"))
+        self._api_mode = TINDER_API_MODE.lower()
+        self._ttl_seconds = ttl_seconds if ttl_seconds is not None else SESSION_TTL_SECONDS
 
     def _is_expired(self, user_id: Hashable, now: float | None = None) -> bool:
         last_seen = self._last_seen.get(user_id)
