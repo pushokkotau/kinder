@@ -189,13 +189,10 @@ def autoswipe(
             detail="City must be selected before AutoSwipe",
         )
 
-    recommendations = RecommendationService(client)
-    result = AutoSwipeService(
-        location_service=LocationService(client),
-        recommendation_service=recommendations,
-        match_service=MatchService(client),
-        swipe_service=SwipeService(client, recommendations),
-    ).run(city, resolved_location=web_session_locations.get(session_id))
+    result = AutoSwipeService.for_client(client).run(
+        city,
+        resolved_location=web_session_locations.get(session_id),
+    )
 
     return {
         "swipes": result.swipe_result.swipes,
