@@ -1,39 +1,31 @@
 import pytest
 
-from app.services.factory import ServiceFactory
+from app.services.auth import AuthService
 from app.services.session import TinderSessionManager
 from app.services.web_auth import WebAuthService
 from app.services.web_session import WebSessionStateStore
 from app.tinder.client import TinderAPIError
+from app.tinder.models import Location
 
 
 def make_service():
     return WebAuthService(TinderSessionManager(), WebSessionStateStore())
 
 
-def test_web_auth_delegates_authentication_to_service_factory(monkeypatch):
+def test_web_auth_uses_auth_service(monkeypatch):
     monkeypatch.setenv("TINDER_API_MODE", "fake")
     service = make_service()
     calls = []
 
-    class FakeAuth:
-        def authenticate_with_token(self, token):
-            calls.append(("token", token))
+    def authenticate_with_token(self, token):
+        calls.append(token)
 
-    class FakeServices:
-        auth = FakeAuth()
-
-    def for_client(client):
-        calls.append(("client", client))
-        return FakeServices()
-
-    monkeypatch.setattr(ServiceFactory, "for_client", staticmethod(for_client))
+    monkeypatch.setattr(AuthService, "authenticate_with_token", authenticate_with_token)
 
     session_id = service.authenticate_with_token("test-token")
 
-    assert calls[0][0] == "client"
-    assert calls[0][1] is service.sessions.find_client(session_id)
-    assert calls[1] == ("token", "test-token")
+    assert calls == ["test-token"]
+    assert service.sessions.find_client(session_id).is_authenticated
 
 
 def test_token_auth_creates_authenticated_web_session(monkeypatch):
@@ -74,7 +66,11 @@ def test_logout_removes_tinder_and_web_session(monkeypatch):
     service = make_service()
 
     session_id = service.authenticate_with_token("test-token")
-    service.web_sessions.set_location(session_id, "Amsterdam", "resolved")
+    service.web_sessions.set_location(
+        session_id,
+        "Amsterdam",
+        Location(latitude=52.3676, longitude=4.9041, address="Amsterdam, Netherlands"),
+    )
 
     service.logout(session_id)
 
