@@ -25,13 +25,6 @@ def start_keyboard() -> InlineKeyboardMarkup:
     )
 
 
-def unauthenticated_keyboard() -> ReplyKeyboardMarkup:
-    return ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="Авторизоваться")]],
-        resize_keyboard=True,
-    )
-
-
 def main_keyboard() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
