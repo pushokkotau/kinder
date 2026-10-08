@@ -1,5 +1,7 @@
 import asyncio
 
+from geopy.exc import GeocoderServiceError
+
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
@@ -9,7 +11,6 @@ from app.bot.states import MainStates
 from app.services.factory import ServiceFactory
 from app.services.session import TinderSessionManager
 from app.tinder.client import TinderAPIError
-from geopy.exc import GeocoderServiceError
 
 
 def create_router(sessions: TinderSessionManager) -> Router:
