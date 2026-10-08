@@ -5,7 +5,6 @@ from app.services.location import LocationService
 from app.services.matches import MatchService
 from app.services.recommendations import RecommendationService
 from app.services.swipe import SwipeService
-from app.tinder.client import TinderClient
 from app.tinder.models import MatchStats, SwipeResult
 
 
@@ -31,16 +30,6 @@ class AutoSwipeService:
         self.recommendations = recommendation_service
         self.matches = match_service
         self.swipes = swipe_service
-
-    @classmethod
-    def for_client(cls, client: TinderClient) -> "AutoSwipeService":
-        recommendations = RecommendationService(client)
-        return cls(
-            location_service=LocationService(client),
-            recommendation_service=recommendations,
-            match_service=MatchService(client),
-            swipe_service=SwipeService(client, recommendations),
-        )
 
     def run(self, city: str, resolved_location: Any = None) -> AutoSwipeResult:
         location = (

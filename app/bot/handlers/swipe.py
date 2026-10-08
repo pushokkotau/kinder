@@ -6,7 +6,7 @@ from aiogram.types import Message
 
 from app.bot.keyboards import main_keyboard
 from app.bot.states import MainStates
-from app.services.auto_swipe import AutoSwipeService
+from app.services.factory import ServiceFactory
 from app.services.session import TinderSessionManager
 
 
@@ -44,7 +44,8 @@ def create_router(sessions: TinderSessionManager) -> Router:
 
         await state.set_state(MainStates.swiping)
 
-        service = AutoSwipeService.for_client(client)
+        services = ServiceFactory.for_client(client)
+        service = services.autoswipe
 
         await message.answer("Запускаю AutoSwipe...")
 
@@ -68,14 +69,14 @@ def create_router(sessions: TinderSessionManager) -> Router:
         )
 
         await message.answer(
-            f"AutoSwipe завершён.\\n\\n"
-            f"Город: {result.location.address or city}\\n"
-            f"Получено рекомендаций: {result.recommendations_received}\\n"
-            f"Свайпов выполнено: {swipe.swipes}\\n"
-            f"Лайков: {swipe.likes}\\n"
-            f"Дизлайков: {swipe.dislikes}\\n"
-            f"Новых матчей: {matches.new_matches}\\n"
-            f"Всего матчей: {matches.after}\\n"
+            f"AutoSwipe завершён.\n\n"
+            f"Город: {result.location.address or city}\n"
+            f"Получено рекомендаций: {result.recommendations_received}\n"
+            f"Свайпов выполнено: {swipe.swipes}\n"
+            f"Лайков: {swipe.likes}\n"
+            f"Дизлайков: {swipe.dislikes}\n"
+            f"Новых матчей: {matches.new_matches}\n"
+            f"Всего матчей: {matches.after}\n"
             f"Статус: {status}",
             reply_markup=main_keyboard(),
         )
