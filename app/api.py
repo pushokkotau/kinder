@@ -57,6 +57,15 @@ def get_session_id(authorization: Optional[str]) -> str:
     return session_id
 
 
+def remove_web_session(session_id: str) -> None:
+    sessions.remove(session_id)
+    web_session_cities.pop(session_id, None)
+
+    for phone, mapped_session_id in list(web_phone_sessions.items()):
+        if mapped_session_id == session_id:
+            web_phone_sessions.pop(phone, None)
+
+
 def get_client(authorization: Optional[str] = Header(default=None)) -> TinderClient:
     session_id = get_session_id(authorization)
     client = sessions.find_client(session_id)
@@ -84,8 +93,7 @@ def authenticate_with_token(payload: TokenAuthRequest) -> dict[str, str]:
     try:
         client.authenticate_with_token(payload.token)
     except Exception as exc:
-        sessions.remove(session_id)
-        web_session_cities.pop(session_id, None)
+        remove_web_session(session_id)
         raise HTTPException(status_code=401, detail=str(exc)) from exc
     return {"session_token": session_id}
 
@@ -96,7 +104,7 @@ def request_phone_code(payload: PhoneAuthRequest) -> dict[str, object]:
     try:
         client.request_auth_phone(payload.phone)
     except Exception as exc:
-        sessions.remove(session_id)
+        remove_web_session(session_id)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     web_phone_sessions[payload.phone] = session_id
     return {"session_token": session_id, "code_requested": True}
@@ -120,6 +128,16 @@ def verify_phone_code(payload: CodeAuthRequest) -> dict[str, str]:
 
     web_phone_sessions.pop(payload.phone, None)
     return {"session_token": session_id, "tinder_token": token}
+
+
+@app.post("/api/v1/auth/logout")
+def logout(authorization: Optional[str] = Header(default=None)) -> dict[str, str]:
+    session_id = get_session_id(authorization)
+    if sessions.find_client(session_id) is None:
+        raise HTTPException(status_code=401, detail="Invalid session token")
+
+    remove_web_session(session_id)
+    return {"status": "logged_out"}
 
 
 @app.get("/api/v1/profile")
