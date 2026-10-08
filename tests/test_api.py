@@ -150,3 +150,31 @@ def test_logout_rejects_unknown_session():
     )
 
     assert response.status_code == 401
+
+
+def test_token_auth_does_not_hide_unexpected_errors(monkeypatch):
+    def fail_authenticate(self, token):
+        raise RuntimeError("unexpected")
+
+    monkeypatch.setattr(
+        "app.api.TinderClient.authenticate_with_token",
+        fail_authenticate,
+    )
+
+    response = client.post("/api/v1/auth/token", json={"token": "test-token"})
+
+    assert response.status_code == 500
+
+
+def test_phone_auth_does_not_hide_unexpected_errors(monkeypatch):
+    def fail_request(self, phone):
+        raise RuntimeError("unexpected")
+
+    monkeypatch.setattr(
+        "app.api.TinderClient.request_auth_phone",
+        fail_request,
+    )
+
+    response = client.post("/api/v1/auth/phone", json={"phone": "+31612345678"})
+
+    assert response.status_code == 500
