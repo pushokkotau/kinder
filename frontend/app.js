@@ -174,7 +174,18 @@ async function verifyPhone(code) {
   state.token = data.session_token;
   localStorage.setItem("kinder_session_token", state.token);
 }
-function logout(showToast = true) {
+async function logout(showToast = true) {
+  const token = state.token;
+
+  if (showToast && token) {
+    try {
+      await fetch(API_BASE + "/auth/logout", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch (_) {}
+  }
+
   state.token = "";
   localStorage.removeItem("kinder_session_token");
   $("appScreen").classList.add("hidden");
