@@ -124,9 +124,7 @@ def test_autoswipe_reuses_resolved_location(monkeypatch):
 
 
 def test_logout_removes_web_session_state():
-    web_session_cities.clear()
-    web_session_locations.clear()
-    web_phone_sessions.clear()
+    web_sessions.clear()
 
     token = authenticate()
     headers = {"Authorization": f"Bearer {token}"}
