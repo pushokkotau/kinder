@@ -46,6 +46,9 @@ class WebSessionStateStore:
     def find_by_phone(self, phone: str) -> str | None:
         return self._phone_sessions.get(phone)
 
+    def unbind_phone(self, phone: str) -> None:
+        self._phone_sessions.pop(phone, None)
+
     def remove(self, session_id: str) -> None:
         state = self._sessions.pop(session_id, None)
         if state:

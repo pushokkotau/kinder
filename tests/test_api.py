@@ -166,8 +166,8 @@ class FailingAuthClient:
 
 def test_token_auth_maps_tinder_api_error_to_401(monkeypatch):
     monkeypatch.setattr(
-        "app.api.create_web_session",
-        lambda: ("test-session", FailingAuthClient()),
+        "app.api.web_auth.authenticate_with_token",
+        lambda token: (_ for _ in ()).throw(TinderAPIError("invalid token")),
     )
 
     response = client.post("/api/v1/auth/token", json={"token": "test-token"})
@@ -178,8 +178,8 @@ def test_token_auth_maps_tinder_api_error_to_401(monkeypatch):
 
 def test_phone_auth_maps_tinder_api_error_to_400(monkeypatch):
     monkeypatch.setattr(
-        "app.api.create_web_session",
-        lambda: ("test-session", FailingAuthClient()),
+        "app.api.web_auth.request_phone_code",
+        lambda phone: (_ for _ in ()).throw(TinderAPIError("invalid phone")),
     )
 
     response = client.post("/api/v1/auth/phone", json={"phone": "+31612345678"})

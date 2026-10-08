@@ -1,5 +1,4 @@
 from typing import Optional
-from uuid import uuid4
 
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,6 +7,7 @@ from pydantic import BaseModel, Field
 from app.services.auto_swipe import AutoSwipeService
 from app.services.location import LocationService
 from app.services.matches import MatchService
+from app.services.web_auth import WebAuthService
 from app.services.web_session import WebSessionStateStore
 from app.services.swipe import SwipeService
 from app.services.profile import ProfileService
@@ -29,6 +29,7 @@ app.add_middleware(
 
 sessions = TinderSessionManager()
 web_sessions = WebSessionStateStore()
+web_auth = WebAuthService(sessions, web_sessions)
 
 
 class TokenAuthRequest(BaseModel):
@@ -59,25 +60,20 @@ def get_session_id(authorization: Optional[str]) -> str:
 
 
 def remove_web_session(session_id: str) -> None:
-    sessions.remove(session_id)
-    web_sessions.remove(session_id)
+    web_auth.remove_session(session_id)
 
 
 def get_client(authorization: Optional[str] = Header(default=None)) -> TinderClient:
     session_id = get_session_id(authorization)
-    client = sessions.find_client(session_id)
-    if client is None:
-        raise HTTPException(status_code=401, detail="Invalid session token")
-    if not client.is_authenticated:
-        raise HTTPException(status_code=401, detail="Tinder user is not authenticated")
-    return client
-
-
-def create_web_session() -> tuple[str, TinderClient]:
-    session_id = uuid4().hex
-    client = sessions.get_client(session_id)
-    web_sessions.create(session_id)
-    return session_id, client
+    try:
+        return web_auth.get_authenticated_client(session_id)
+    except TinderAPIError as exc:
+        detail = str(exc)
+        if detail == "Tinder user is not authenticated.":
+            detail = "Tinder user is not authenticated"
+        else:
+            detail = "Invalid session token"
+        raise HTTPException(status_code=401, detail=detail) from exc
 
 
 @app.get("/api/v1/health")
@@ -87,56 +83,38 @@ def health() -> dict[str, str]:
 
 @app.post("/api/v1/auth/token")
 def authenticate_with_token(payload: TokenAuthRequest) -> dict[str, str]:
-    session_id, client = create_web_session()
     try:
-        client.authenticate_with_token(payload.token)
+        session_id = web_auth.authenticate_with_token(payload.token)
     except (TinderAPIError, ValueError) as exc:
-        remove_web_session(session_id)
         raise HTTPException(status_code=401, detail=str(exc)) from exc
     return {"session_token": session_id}
 
 
 @app.post("/api/v1/auth/phone")
 def request_phone_code(payload: PhoneAuthRequest) -> dict[str, object]:
-    session_id, client = create_web_session()
     try:
-        client.request_auth_phone(payload.phone)
+        session_id = web_auth.request_phone_code(payload.phone)
     except (TinderAPIError, ValueError) as exc:
-        remove_web_session(session_id)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    web_sessions.bind_phone(payload.phone, session_id)
     return {"session_token": session_id, "code_requested": True}
 
 
 @app.post("/api/v1/auth/phone/verify")
 def verify_phone_code(payload: CodeAuthRequest) -> dict[str, str]:
-    session_id = web_sessions.find_by_phone(payload.phone)
-    if session_id is None:
-        raise HTTPException(status_code=401, detail="Phone authentication session not found")
-
-    client = sessions.find_client(session_id)
-    if client is None:
-        web_sessions.remove(session_id)
-        raise HTTPException(status_code=401, detail="Phone authentication session not found")
-
     try:
-        token = client.authenticate_with_phone_code(payload.phone, payload.code)
+        session_id, token = web_auth.verify_phone_code(payload.phone, payload.code)
     except (TinderAPIError, ValueError) as exc:
         raise HTTPException(status_code=401, detail=str(exc)) from exc
-
-    state = web_sessions.get(session_id)
-    if state:
-        state.phones.discard(payload.phone)
     return {"session_token": session_id, "tinder_token": token}
 
 
 @app.post("/api/v1/auth/logout")
 def logout(authorization: Optional[str] = Header(default=None)) -> dict[str, str]:
     session_id = get_session_id(authorization)
-    if sessions.find_client(session_id) is None:
-        raise HTTPException(status_code=401, detail="Invalid session token")
-
-    remove_web_session(session_id)
+    try:
+        web_auth.logout(session_id)
+    except TinderAPIError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
     return {"status": "logged_out"}
 
 
