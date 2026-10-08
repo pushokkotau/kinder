@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Optional
 from uuid import uuid4
 
 from fastapi import Depends, FastAPI, Header, HTTPException
@@ -8,7 +8,6 @@ from pydantic import BaseModel, Field
 from app.services.auto_swipe import AutoSwipeService
 from app.services.location import LocationService
 from app.services.matches import MatchService
-from app.services.swipe import SwipeService
 from app.services.web_session import WebSessionStateStore
 from app.services.profile import ProfileService
 from app.services.recommendations import RecommendationService
