@@ -1,3 +1,4 @@
+from tests.helpers import recommendation
 from app.services.auto_swipe import AutoSwipeService
 from app.services.matches import MatchService
 from app.services.recommendations import RecommendationService
@@ -68,14 +69,6 @@ class FakeSwipes:
         )
 
 
-def recommendation(user_id, photos):
-    user = TinderUser(
-        id=user_id,
-        name=user_id,
-        photos=photos,
-        raw={"_id": user_id},
-    )
-    return Recommendation(user=user, s_number=1, raw={})
 
 
 class FakeAutoSwipeClient:
