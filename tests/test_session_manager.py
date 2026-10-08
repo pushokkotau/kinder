@@ -21,6 +21,22 @@ def test_authenticated_client_is_reused_for_same_user(monkeypatch):
     assert sessions.get_authenticated_client(1) is client
 
 
+def test_authenticated_client_does_not_recreate_expired_session(monkeypatch):
+    monkeypatch.setenv("TINDER_API_MODE", "fake")
+    sessions = TinderSessionManager(ttl_seconds=60)
+    monkeypatch.setattr("app.services.session.time.monotonic", lambda: 100.0)
+
+    client = sessions.get_client("web-session")
+    client.authenticate_with_token("test-token")
+
+    monkeypatch.setattr("app.services.session.time.monotonic", lambda: 161.0)
+
+    with pytest.raises(TinderAPIError, match="not found or expired"):
+        sessions.get_authenticated_client("web-session")
+
+    assert sessions.find_client("web-session") is None
+
+
 def test_sessions_are_isolated_between_users(monkeypatch):
     monkeypatch.setenv("TINDER_API_MODE", "fake")
     sessions = TinderSessionManager()
