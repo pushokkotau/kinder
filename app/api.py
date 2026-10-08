@@ -8,6 +8,7 @@ from app.services.auto_swipe import AutoSwipeService
 from app.routers.auth import create_auth_router
 from app.routers.profile import create_profile_router
 from app.routers.recommendations import create_recommendations_router
+from app.routers.swipe import create_swipe_router
 from app.services.web_auth import WebAuthService
 from app.services.web_session import WebSessionStateStore
 from app.services.factory import ClientServices, ServiceFactory
@@ -78,18 +79,8 @@ app.include_router(create_profile_router(get_services))
 
 app.include_router(create_recommendations_router(get_services))
 
-@app.post("/api/v1/swipes/{action}/{user_id}")
-def swipe(action: str, user_id: str, services: ClientServices = Depends(get_services)) -> dict[str, str]:
-    if action not in {"like", "dislike"}:
-        raise HTTPException(status_code=400, detail="Action must be like or dislike")
 
-    if action == "like":
-        services.swipe.like(user_id)
-    else:
-        services.swipe.dislike(user_id)
-
-    return {"action": action, "user_id": user_id}
-
+app.include_router(create_swipe_router(get_services))
 
 @app.post("/api/v1/autoswipe")
 def autoswipe(
