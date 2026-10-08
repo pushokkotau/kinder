@@ -80,9 +80,7 @@ def test_invalid_swipe_action():
 
 
 def test_autoswipe_reuses_resolved_location(monkeypatch):
-    web_session_cities.clear()
-    web_session_locations.clear()
-    web_phone_sessions.clear()
+    web_sessions.clear()
 
     class FakeLocation:
         address = "Amsterdam"
