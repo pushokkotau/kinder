@@ -4,7 +4,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from app.services.auto_swipe import AutoSwipeService
+from app.routers.autoswipe import create_autoswipe_router
 from app.routers.auth import create_auth_router
 from app.routers.profile import create_profile_router
 from app.routers.recommendations import create_recommendations_router
@@ -82,37 +82,8 @@ app.include_router(create_recommendations_router(get_services))
 
 app.include_router(create_swipe_router(get_services))
 
-@app.post("/api/v1/autoswipe")
-def autoswipe(
-    authorization: Optional[str] = Header(default=None),
-    client: TinderClient = Depends(get_client),
-) -> dict[str, int | bool]:
-    session_id = get_session_id(authorization)
-    state = web_sessions.get(session_id)
-    city = state.city if state else None
-    if not city:
-        raise HTTPException(
-            status_code=400,
-            detail="City must be selected before AutoSwipe",
-        )
 
-    result = AutoSwipeService.for_client(client).run(
-        city,
-        resolved_location=state.location if state else None,
-    )
-
-    return {
-        "swipes": result.swipe_result.swipes,
-        "likes": result.swipe_result.likes,
-        "dislikes": result.swipe_result.dislikes,
-        "limit_reached": result.swipe_result.limit_reached,
-        "recommendations_exhausted": result.swipe_result.recommendations_exhausted,
-        "recommendations_received": result.recommendations_received,
-        "matches_before": result.match_stats.before,
-        "matches_after": result.match_stats.after,
-        "new_matches": result.match_stats.new_matches,
-    }
-
+app.include_router(create_autoswipe_router(get_client, web_sessions))
 
 @app.get("/api/v1/matches/count")
 def matches_count(services: ClientServices = Depends(get_services)) -> dict[str, int]:
