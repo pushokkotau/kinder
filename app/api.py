@@ -114,7 +114,6 @@ def logout(authorization: Optional[str] = Header(default=None)) -> dict[str, str
     return {"status": "logged_out"}
 
 
-@app.get("/api/v1/profile")
 def get_services(client: TinderClient = Depends(get_client)) -> ClientServices:
     return ServiceFactory.for_client(client)
 
