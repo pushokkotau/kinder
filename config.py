@@ -13,3 +13,11 @@ def get_tinder_api_mode() -> str:
 
 def get_session_ttl_seconds() -> float:
     return float(os.getenv("SESSION_TTL_SECONDS", "3600"))
+
+
+def get_web_allowed_origins() -> list[str]:
+    value = os.getenv(
+        "WEB_ALLOWED_ORIGINS",
+        "http://localhost:5500,http://127.0.0.1:5500",
+    )
+    return [origin.strip() for origin in value.split(",") if origin.strip()]
