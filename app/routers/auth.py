@@ -1,8 +1,7 @@
-from typing import Optional
-
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from app.dependencies import get_session_id
 from app.services.web_auth import WebAuthService
 from app.tinder.client import TinderAPIError
 
@@ -18,16 +17,6 @@ class PhoneAuthRequest(BaseModel):
 class CodeAuthRequest(BaseModel):
     phone: str = Field(min_length=1)
     code: str = Field(min_length=1)
-
-
-def _get_session_id(authorization: Optional[str]) -> str:
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing Bearer token")
-
-    session_id = authorization.removeprefix("Bearer ").strip()
-    if not session_id:
-        raise HTTPException(status_code=401, detail="Missing Bearer token")
-    return session_id
 
 
 def create_auth_router(web_auth: WebAuthService) -> APIRouter:
@@ -58,8 +47,7 @@ def create_auth_router(web_auth: WebAuthService) -> APIRouter:
         return {"session_token": session_id, "tinder_token": token}
 
     @router.post("/logout")
-    def logout(authorization: Optional[str] = Header(default=None)) -> dict[str, str]:
-        session_id = _get_session_id(authorization)
+    def logout(session_id: str = Depends(get_session_id)) -> dict[str, str]:
         try:
             web_auth.logout(session_id)
         except TinderAPIError as exc:
