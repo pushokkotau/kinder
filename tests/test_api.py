@@ -7,6 +7,7 @@ from app.api import (
     sessions,
     web_sessions,
 )
+from app.services.location import LocationService
 
 
 client = TestClient(app)
@@ -97,7 +98,7 @@ def test_autoswipe_reuses_resolved_location(monkeypatch):
         self.client.set_location(FakeLocation.latitude, FakeLocation.longitude)
         return FakeLocation()
 
-    monkeypatch.setattr("app.api.LocationService.set_city", set_city)
+    monkeypatch.setattr(LocationService, "set_city", set_city)
 
     token = authenticate()
     headers = {"Authorization": f"Bearer {token}"}
