@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from app.api import app, web_sessions
+from app.api import app, sessions, web_phone_sessions, web_session_cities
 
 
 client = TestClient(app)
@@ -23,9 +23,23 @@ def test_protected_endpoints_require_auth():
     assert response.status_code == 401
 
 
+def test_invalid_session_does_not_create_client():
+    session_id = "missing-session"
+    sessions.remove(session_id)
+
+    response = client.get(
+        "/api/v1/profile",
+        headers={"Authorization": f"Bearer {session_id}"},
+    )
+
+    assert response.status_code == 401
+    assert sessions.find_client(session_id) is None
+
+
 def test_frontend_flow_with_fake_api(monkeypatch):
     monkeypatch.setenv("TINDER_API_MODE", "fake")
-    web_sessions.clear()
+    web_session_cities.clear()
+    web_phone_sessions.clear()
 
     token = authenticate()
     headers = {"Authorization": f"Bearer {token}"}
@@ -63,7 +77,8 @@ def test_invalid_swipe_action():
 
 
 def test_autoswipe_uses_complete_fake_match_flow(monkeypatch):
-    web_sessions.clear()
+    web_session_cities.clear()
+    web_phone_sessions.clear()
 
     class FakeLocation:
         address = "Amsterdam"
