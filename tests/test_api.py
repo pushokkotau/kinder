@@ -1,6 +1,8 @@
 from fastapi.testclient import TestClient
 
-from app.tinder.client import TinderAPIError\n\nfrom app.api import (
+from app.tinder.client import TinderAPIError
+
+from app.api import (
     app,
     sessions,
     web_sessions,
