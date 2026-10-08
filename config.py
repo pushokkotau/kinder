@@ -4,7 +4,12 @@
 SWIPE_LIMIT = 100
 
 # Tinder API mode used for session clients.
-TINDER_API_MODE = "fake"
+import os
 
-# Session inactivity timeout in seconds.
-SESSION_TTL_SECONDS = 3600.0
+
+def get_tinder_api_mode() -> str:
+    return os.getenv("TINDER_API_MODE", "fake").lower()
+
+
+def get_session_ttl_seconds() -> float:
+    return float(os.getenv("SESSION_TTL_SECONDS", "3600"))
