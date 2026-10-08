@@ -25,6 +25,13 @@ class Profile:
 
 
 @dataclass(frozen=True)
+class Location:
+    latitude: float
+    longitude: float
+    address: str
+
+
+@dataclass(frozen=True)
 class SwipeResult:
     swipes: int
     likes: int
