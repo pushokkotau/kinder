@@ -27,16 +27,19 @@ class ServiceFactory:
     @staticmethod
     def for_client(client: TinderClient) -> ClientServices:
         recommendations = RecommendationService(client)
+        swipe = SwipeService(client, recommendations)
+        location = LocationService(client)
+        matches = MatchService(client)
         return ClientServices(
             profile=ProfileService(client),
             recommendations=recommendations,
-            swipe=SwipeService(client, recommendations),
-            location=LocationService(client),
-            matches=MatchService(client),
+            swipe=swipe,
+            location=location,
+            matches=matches,
             autoswipe=AutoSwipeService(
-                location_service=LocationService(client),
+                location_service=location,
                 recommendation_service=recommendations,
-                match_service=MatchService(client),
-                swipe_service=SwipeService(client, recommendations),
+                match_service=matches,
+                swipe_service=swipe,
             ),
         )
