@@ -15,12 +15,13 @@ from app.services.recommendations import RecommendationService
 from app.services.session import TinderSessionManager
 from app.tinder.client import TinderClient
 from app.tinder.models import Recommendation
+from config import get_web_allowed_origins
 
 app = FastAPI(title="Kinder API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=get_web_allowed_origins(),
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
