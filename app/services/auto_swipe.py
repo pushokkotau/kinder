@@ -31,8 +31,12 @@ class AutoSwipeService:
         self.matches = match_service
         self.swipes = swipe_service
 
-    def run(self, city: str) -> AutoSwipeResult:
-        location = self.location_service.set_city(city)
+    def run(self, city: str, resolved_location: Any = None) -> AutoSwipeResult:
+        location = (
+            self.location_service.set_location(resolved_location)
+            if resolved_location is not None
+            else self.location_service.set_city(city)
+        )
 
         # Fetch recommendations before taking the match snapshot and before
         # performing any swipe, as required by the AutoSwipe flow.
