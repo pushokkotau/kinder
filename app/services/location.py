@@ -17,21 +17,10 @@ class LocationService:
     def set_city(self, city: str) -> Location:
         location = self.geolocator.geocode(
             city,
-            featuretype="city",
             addressdetails=True,
         )
         if location is None:
-            raise ValueError(f"City not found: {city}")
-
-        result_type = getattr(location, "raw", {}).get("type")
-        if result_type not in {
-            "city",
-            "town",
-            "village",
-            "municipality",
-            "administrative",
-        }:
-            raise ValueError(f"City not found: {city}")
+            raise ValueError(f"Location not found: {city}")
 
         return self.set_location(location)
 
