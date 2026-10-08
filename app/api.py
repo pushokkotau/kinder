@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routers.autoswipe import create_autoswipe_router
 from app.routers.auth import create_auth_router
 from app.routers.location import create_location_router
+from app.routers.matches import create_matches_router
 from app.routers.profile import create_profile_router
 from app.routers.recommendations import create_recommendations_router
 from app.routers.swipe import create_swipe_router
@@ -81,10 +82,8 @@ app.include_router(create_swipe_router(get_services))
 
 app.include_router(create_autoswipe_router(get_client, web_sessions))
 
-@app.get("/api/v1/matches/count")
-def matches_count(services: ClientServices = Depends(get_services)) -> dict[str, int]:
-    return {"count": services.matches.get_count()}
 
 
+app.include_router(create_matches_router(get_services))
 
 app.include_router(create_location_router(get_client, get_services, web_sessions))
