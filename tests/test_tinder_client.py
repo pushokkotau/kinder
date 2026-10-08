@@ -312,3 +312,13 @@ def test_get_matches_count_stops_after_page_without_next_token():
 
     assert client.get_matches_count() == 2
     assert len(session.calls) == 2
+
+
+def test_invalid_json_is_wrapped_as_tinder_api_error():
+    client = TinderClient(base_url="https://example.test")
+    response = FakeResponse()
+    response.json = lambda: (_ for _ in ()).throw(ValueError("bad json"))
+    client.session = FakeSession([response])
+
+    with pytest.raises(TinderAPIError, match="invalid JSON"):
+        client.get_recommendations()
