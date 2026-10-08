@@ -1,4 +1,4 @@
-name: Tests\n# CI verification
+name: Tests
 
 on:
   push:
