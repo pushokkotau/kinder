@@ -225,3 +225,27 @@ def test_location_maps_unknown_city_to_400(monkeypatch):
 
     assert response.status_code == 400
     assert response.json()["detail"] == "City not found: Atlantis"
+
+
+def test_profile_maps_tinder_api_error_to_502(monkeypatch):
+    token = authenticate()
+    monkeypatch.setattr("app.services.profile.ProfileService.get_profile", lambda self: (_ for _ in ()).throw(TinderAPIError("upstream failed")))
+    response = client.get("/api/v1/profile", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 502
+    assert response.json() == {"detail": "Tinder API request failed"}
+
+
+def test_matches_maps_tinder_api_error_to_502(monkeypatch):
+    token = authenticate()
+    monkeypatch.setattr("app.services.matches.MatchService.get_count", lambda self: (_ for _ in ()).throw(TinderAPIError("upstream failed")))
+    response = client.get("/api/v1/matches/count", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 502
+    assert response.json() == {"detail": "Tinder API request failed"}
+
+
+def test_swipe_maps_tinder_api_error_to_502(monkeypatch):
+    token = authenticate()
+    monkeypatch.setattr("app.services.swipe.SwipeService.like", lambda self, user_id: (_ for _ in ()).throw(TinderAPIError("upstream failed")))
+    response = client.post("/api/v1/swipes/like/user-1", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 502
+    assert response.json() == {"detail": "Tinder API request failed"}
