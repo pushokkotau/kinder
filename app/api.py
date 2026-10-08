@@ -13,7 +13,7 @@ from app.services.swipe import SwipeService
 from app.services.profile import ProfileService
 from app.services.recommendations import RecommendationService
 from app.services.session import TinderSessionManager
-from app.tinder.client import TinderClient
+from app.tinder.client import TinderAPIError, TinderClient
 from app.tinder.models import Recommendation
 from config import get_web_allowed_origins
 
@@ -90,7 +90,7 @@ def authenticate_with_token(payload: TokenAuthRequest) -> dict[str, str]:
     session_id, client = create_web_session()
     try:
         client.authenticate_with_token(payload.token)
-    except Exception as exc:
+    except (TinderAPIError, ValueError) as exc:
         remove_web_session(session_id)
         raise HTTPException(status_code=401, detail=str(exc)) from exc
     return {"session_token": session_id}
@@ -101,7 +101,7 @@ def request_phone_code(payload: PhoneAuthRequest) -> dict[str, object]:
     session_id, client = create_web_session()
     try:
         client.request_auth_phone(payload.phone)
-    except Exception as exc:
+    except (TinderAPIError, ValueError) as exc:
         remove_web_session(session_id)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     web_sessions.bind_phone(payload.phone, session_id)
@@ -121,7 +121,7 @@ def verify_phone_code(payload: CodeAuthRequest) -> dict[str, str]:
 
     try:
         token = client.authenticate_with_phone_code(payload.phone, payload.code)
-    except Exception as exc:
+    except (TinderAPIError, ValueError) as exc:
         raise HTTPException(status_code=401, detail=str(exc)) from exc
 
     state = web_sessions.get(session_id)

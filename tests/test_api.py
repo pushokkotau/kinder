@@ -1,5 +1,7 @@
 from fastapi.testclient import TestClient
 
+from app.tinder.client import TinderAPIError
+
 from app.api import (
     app,
     sessions,
@@ -150,3 +152,37 @@ def test_logout_rejects_unknown_session():
     )
 
     assert response.status_code == 401
+
+
+class FailingAuthClient:
+    is_authenticated = False
+
+    def authenticate_with_token(self, token):
+        raise TinderAPIError("invalid token")
+
+    def request_auth_phone(self, phone):
+        raise TinderAPIError("invalid phone")
+
+
+def test_token_auth_maps_tinder_api_error_to_401(monkeypatch):
+    monkeypatch.setattr(
+        "app.api.create_web_session",
+        lambda: ("test-session", FailingAuthClient()),
+    )
+
+    response = client.post("/api/v1/auth/token", json={"token": "test-token"})
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "invalid token"
+
+
+def test_phone_auth_maps_tinder_api_error_to_400(monkeypatch):
+    monkeypatch.setattr(
+        "app.api.create_web_session",
+        lambda: ("test-session", FailingAuthClient()),
+    )
+
+    response = client.post("/api/v1/auth/phone", json={"phone": "+31612345678"})
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "invalid phone"
