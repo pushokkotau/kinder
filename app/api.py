@@ -69,7 +69,7 @@ app.include_router(create_recommendations_router(get_services))
 
 app.include_router(create_swipe_router(get_services))
 
-app.include_router(create_autoswipe_router(get_client, web_sessions))
+app.include_router(create_autoswipe_router(get_services, web_sessions))
 
 app.include_router(create_matches_router(get_services))
 
