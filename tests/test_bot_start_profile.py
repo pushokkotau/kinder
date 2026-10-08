@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import pytest
 
 from app.bot.handlers.profile import create_router
-from app.bot.handlers.start import start
+from app.bot.handlers.start import authenticate, start
 from app.tinder.client import TinderAPIError
 from app.tinder.models import Profile
 
@@ -36,7 +36,7 @@ def _run_sync(func, *args):
 
 
 @pytest.mark.asyncio
-async def test_start_shows_authentication_prompt():
+async def test_start_shows_authentication_button():
     message = FakeMessage()
 
     await start(message)
@@ -44,7 +44,20 @@ async def test_start_shows_authentication_prompt():
     assert message.answers[0][0] == (
         "Привет! Для работы бота сначала авторизуй Tinder."
     )
-    assert "reply_markup" in message.answers[0][1]
+    assert message.answers[0][1]["reply_markup"].keyboard[0][0].text == (
+        "Авторизоваться"
+    )
+
+
+@pytest.mark.asyncio
+async def test_authenticate_shows_authentication_options():
+    message = FakeMessage("Авторизоваться")
+
+    await authenticate(message)
+
+    markup = message.answers[0][1]["reply_markup"]
+    assert markup.inline_keyboard[0][0].text == "Авторизоваться по телефону"
+    assert markup.inline_keyboard[1][0].text == "Ввести Tinder token (тест)"
 
 
 @pytest.mark.asyncio
