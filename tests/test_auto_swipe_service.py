@@ -2,7 +2,13 @@ from app.services.auto_swipe import AutoSwipeService
 from app.services.matches import MatchService
 from app.services.recommendations import RecommendationService
 from app.services.swipe import SwipeService
-from app.tinder.models import MatchStats, Recommendation, SwipeResult, TinderUser
+from app.tinder.models import (
+    Location,
+    MatchStats,
+    Recommendation,
+    SwipeResult,
+    TinderUser,
+)
 
 
 class FakeLocationService:
@@ -11,7 +17,7 @@ class FakeLocationService:
 
     def set_city(self, city):
         self.events.append(("location", city))
-        return {"address": city}
+        return Location(latitude=52.37, longitude=4.90, address=city)
 
 
 class FakeRecommendations:
@@ -119,6 +125,11 @@ def test_auto_swipe_follows_required_business_order():
         ("matches", 12),
         ("calculate", 10, 12),
     ]
+    assert result.location == Location(
+        latitude=52.37,
+        longitude=4.90,
+        address="Amsterdam",
+    )
     assert result.recommendations_received == 1
     assert result.match_stats.before == 10
     assert result.match_stats.after == 12
@@ -134,7 +145,11 @@ def test_auto_swipe_reuses_resolved_location_without_resetting_it():
         swipe_service=FakeSwipes(events),
     )
 
-    resolved_location = {"address": "Amsterdam"}
+    resolved_location = Location(
+        latitude=52.37,
+        longitude=4.90,
+        address="Amsterdam",
+    )
 
     result = service.run("Amsterdam", resolved_location=resolved_location)
 

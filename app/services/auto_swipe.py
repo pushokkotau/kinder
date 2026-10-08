@@ -1,11 +1,10 @@
 from dataclasses import dataclass
-from typing import Any
 
 from app.services.location import LocationService
 from app.services.matches import MatchService
 from app.services.recommendations import RecommendationService
 from app.services.swipe import SwipeService
-from app.tinder.models import MatchStats, SwipeResult
+from app.tinder.models import Location, MatchStats, SwipeResult
 
 
 @dataclass(frozen=True)
@@ -13,7 +12,7 @@ class AutoSwipeResult:
     swipe_result: SwipeResult
     match_stats: MatchStats
     recommendations_received: int
-    location: Any
+    location: Location
 
 
 class AutoSwipeService:
@@ -31,7 +30,11 @@ class AutoSwipeService:
         self.matches = match_service
         self.swipes = swipe_service
 
-    def run(self, city: str, resolved_location: Any = None) -> AutoSwipeResult:
+    def run(
+        self,
+        city: str,
+        resolved_location: Location | None = None,
+    ) -> AutoSwipeResult:
         location = (
             resolved_location
             if resolved_location is not None
