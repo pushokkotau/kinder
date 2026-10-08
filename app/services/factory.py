@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+from app.services.auto_swipe import AutoSwipeService
 from app.services.location import LocationService
 from app.services.matches import MatchService
 from app.services.profile import ProfileService
@@ -17,6 +18,7 @@ class ClientServices:
     swipe: SwipeService
     location: LocationService
     matches: MatchService
+    autoswipe: AutoSwipeService
 
 
 class ServiceFactory:
@@ -31,4 +33,10 @@ class ServiceFactory:
             swipe=SwipeService(client, recommendations),
             location=LocationService(client),
             matches=MatchService(client),
+            autoswipe=AutoSwipeService(
+                location_service=LocationService(client),
+                recommendation_service=recommendations,
+                match_service=MatchService(client),
+                swipe_service=SwipeService(client, recommendations),
+            ),
         )
