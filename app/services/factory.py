@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+from app.services.auth import AuthService
 from app.services.auto_swipe import AutoSwipeService
 from app.services.location import LocationService
 from app.services.matches import MatchService
@@ -13,6 +14,7 @@ from app.tinder.client import TinderClient
 class ClientServices:
     """Service graph composed around one authenticated Tinder client."""
 
+    auth: AuthService
     profile: ProfileService
     recommendations: RecommendationService
     swipe: SwipeService
@@ -31,6 +33,7 @@ class ServiceFactory:
         location = LocationService(client)
         matches = MatchService(client)
         return ClientServices(
+            auth=AuthService(client),
             profile=ProfileService(client),
             recommendations=recommendations,
             swipe=swipe,

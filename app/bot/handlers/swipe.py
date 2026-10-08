@@ -69,14 +69,14 @@ def create_router(sessions: TinderSessionManager) -> Router:
         )
 
         await message.answer(
-            f"AutoSwipe завершён.\n\n"
-            f"Город: {result.location.address or city}\n"
-            f"Получено рекомендаций: {result.recommendations_received}\n"
-            f"Свайпов выполнено: {swipe.swipes}\n"
-            f"Лайков: {swipe.likes}\n"
-            f"Дизлайков: {swipe.dislikes}\n"
-            f"Новых матчей: {matches.new_matches}\n"
-            f"Всего матчей: {matches.after}\n"
+            f"AutoSwipe завершён.\\n\\n"
+            f"Город: {result.location.address or city}\\n"
+            f"Получено рекомендаций: {result.recommendations_received}\\n"
+            f"Свайпов выполнено: {swipe.swipes}\\n"
+            f"Лайков: {swipe.likes}\\n"
+            f"Дизлайков: {swipe.dislikes}\\n"
+            f"Новых матчей: {matches.new_matches}\\n"
+            f"Всего матчей: {matches.after}\\n"
             f"Статус: {status}",
             reply_markup=main_keyboard(),
         )
