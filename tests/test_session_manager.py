@@ -4,11 +4,11 @@ from app.services.session import TinderSessionManager
 from app.tinder.client import TinderAPIError
 
 
-def test_get_authenticated_client_rejects_unauthenticated_session(monkeypatch):
+def test_get_authenticated_client_rejects_missing_session(monkeypatch):
     monkeypatch.setenv("TINDER_API_MODE", "fake")
     sessions = TinderSessionManager()
 
-    with pytest.raises(TinderAPIError, match="not authenticated"):
+    with pytest.raises(TinderAPIError, match="not found or expired"):
         sessions.get_authenticated_client(1)
 
 
