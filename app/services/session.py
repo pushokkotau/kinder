@@ -1,6 +1,5 @@
 import os
 from collections.abc import Hashable
-from typing import Dict
 
 from app.tinder.client import TinderAPIError, TinderClient
 from app.tinder.fake_client import FakeTinderClient
@@ -9,8 +8,8 @@ from app.tinder.fake_client import FakeTinderClient
 class TinderSessionManager:
     """Keeps one Tinder API client per user or web session in memory."""
 
-    def __init__(self):
-        self._clients: Dict[Hashable, TinderClient] = {}
+    def __init__(self) -> None:
+        self._clients: dict[Hashable, TinderClient] = {}
         self._api_mode = os.getenv("TINDER_API_MODE", "fake").lower()
 
     def get_client(self, user_id: Hashable) -> TinderClient:
