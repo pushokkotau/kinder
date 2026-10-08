@@ -125,6 +125,30 @@ def test_auto_swipe_follows_required_business_order():
     assert result.match_stats.new_matches == 2
 
 
+def test_auto_swipe_reuses_resolved_location_without_resetting_it():
+    events = []
+    service = AutoSwipeService(
+        location_service=FakeLocationService(events),
+        recommendation_service=FakeRecommendations(events),
+        match_service=FakeMatches(events),
+        swipe_service=FakeSwipes(events),
+    )
+
+    resolved_location = {"address": "Amsterdam"}
+
+    result = service.run("Amsterdam", resolved_location=resolved_location)
+
+    assert result.location is resolved_location
+    assert ("location", "Amsterdam") not in events
+    assert events == [
+        "recommendations",
+        ("matches", 10),
+        ("swipes", ["recommendation"]),
+        ("matches", 12),
+        ("calculate", 10, 12),
+    ]
+
+
 def test_auto_swipe_processes_multiple_recommendation_batches_until_limit():
     client = FakeAutoSwipeClient(
         batches=[
