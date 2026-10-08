@@ -1,5 +1,6 @@
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.dependencies import get_session_id
 from app.routers.autoswipe import create_autoswipe_router
@@ -17,6 +18,11 @@ from app.tinder.client import TinderAPIError, TinderClient
 from config import get_web_allowed_origins
 
 app = FastAPI(title="Kinder API", version="1.0.0")
+
+@app.exception_handler(TinderAPIError)
+async def tinder_api_error_handler(request: Request, exc: TinderAPIError) -> JSONResponse:
+    return JSONResponse(status_code=502, content={"detail": "Tinder API request failed"})
+
 
 app.add_middleware(
     CORSMiddleware,
