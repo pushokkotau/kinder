@@ -237,3 +237,78 @@ def test_get_matches_count_follows_pagination():
         "https://example.test/v2/matches?locale=ru&count=100&is_tinder_u=false"
         "&page_token=page-2"
     )
+
+
+def test_get_matches_count_returns_zero_for_empty_matches():
+    client = TinderClient(base_url="https://example.test")
+    session = FakeSession(
+        [FakeResponse(json_data={"data": {"matches": []}})]
+    )
+    client.session = session
+
+    assert client.get_matches_count() == 0
+    assert len(session.calls) == 1
+
+
+def test_get_matches_count_handles_multiple_pages_and_counts_all_matches():
+    client = TinderClient(base_url="https://example.test")
+    session = FakeSession(
+        [
+            FakeResponse(
+                json_data={
+                    "data": {
+                        "matches": [{"id": str(i)} for i in range(100)],
+                        "next_page_token": "page-2",
+                    }
+                }
+            ),
+            FakeResponse(
+                json_data={
+                    "data": {
+                        "matches": [{"id": str(i)} for i in range(100, 200)],
+                        "next_page_token": "page-3",
+                    }
+                }
+            ),
+            FakeResponse(
+                json_data={
+                    "data": {
+                        "matches": [{"id": str(i)} for i in range(200, 201)],
+                    }
+                }
+            ),
+        ]
+    )
+    client.session = session
+
+    assert client.get_matches_count() == 201
+    assert len(session.calls) == 3
+    assert session.calls[1]["url"].endswith("&page_token=page-2")
+    assert session.calls[2]["url"].endswith("&page_token=page-3")
+
+
+def test_get_matches_count_stops_after_page_without_next_token():
+    client = TinderClient(base_url="https://example.test")
+    session = FakeSession(
+        [
+            FakeResponse(
+                json_data={
+                    "data": {
+                        "matches": [{"id": "1"}],
+                        "next_page_token": "page-2",
+                    }
+                }
+            ),
+            FakeResponse(
+                json_data={
+                    "data": {
+                        "matches": [{"id": "2"}],
+                    }
+                }
+            ),
+        ]
+    )
+    client.session = session
+
+    assert client.get_matches_count() == 2
+    assert len(session.calls) == 2
