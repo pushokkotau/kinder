@@ -47,3 +47,34 @@ def test_find_client_does_not_create_unknown_session(monkeypatch):
     sessions = TinderSessionManager()
 
     assert sessions.find_client("missing") is None
+
+
+def test_inactive_session_expires(monkeypatch):
+    monkeypatch.setenv("TINDER_API_MODE", "fake")
+    sessions = TinderSessionManager(ttl_seconds=60)
+    monkeypatch.setattr("app.services.session.time.monotonic", lambda: 100.0)
+
+    client = sessions.get_client("web-session")
+    client.authenticate_with_token("test-token")
+
+    monkeypatch.setattr("app.services.session.time.monotonic", lambda: 161.0)
+
+    assert sessions.find_client("web-session") is None
+
+
+def test_active_session_refreshes_last_seen(monkeypatch):
+    monkeypatch.setenv("TINDER_API_MODE", "fake")
+    sessions = TinderSessionManager(ttl_seconds=60)
+    monkeypatch.setattr("app.services.session.time.monotonic", lambda: 100.0)
+
+    client = sessions.get_client("web-session")
+    client.authenticate_with_token("test-token")
+
+    monkeypatch.setattr("app.services.session.time.monotonic", lambda: 150.0)
+    assert sessions.find_client("web-session") is client
+
+    monkeypatch.setattr("app.services.session.time.monotonic", lambda: 205.0)
+    assert sessions.find_client("web-session") is client
+
+    monkeypatch.setattr("app.services.session.time.monotonic", lambda: 266.0)
+    assert sessions.find_client("web-session") is None
