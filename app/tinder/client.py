@@ -65,6 +65,12 @@ class TinderClient:
             )
         return response
 
+    def _json(self, response: requests.Response) -> dict[str, Any]:
+        try:
+            return response.json()
+        except (ValueError, TypeError) as exc:
+            raise TinderAPIError("Tinder API returned invalid JSON") from exc
+
     def request_auth_phone(self, phone: str) -> requests.Response:
         payload = f"\n\x0e\n\x0c{phone.replace('+', '')}"
         return self._request(
@@ -100,7 +106,7 @@ class TinderClient:
             "likes%2Cnotifications%2Cplus_control%2Cproducts%2Cpurchase%2Creadreceipts%2C"
             "swipenote%2Cspotify%2Csuper_likes%2Ctinder_u%2Ctravel%2Ctutorials%2Cuser"
         ).format(self.locale)
-        data = self._request("GET", path).json()["data"]["user"]
+        data = self._json(self._request("GET", path))["data"]["user"]
         position = data.get("pos_info", {})
         if "state" in position:
             city = position["state"].get("name", "")
@@ -123,9 +129,9 @@ class TinderClient:
         )
 
     def get_recommendations(self) -> list[Recommendation]:
-        data = self._request(
-            "GET", f"/v2/recs/core?locale={self.locale}"
-        ).json().get("data", {})
+        data = self._json(
+            self._request("GET", f"/v2/recs/core?locale={self.locale}")
+        ).get("data", {})
         recommendations = []
         for item in data.get("results", []):
             user = item.get("user", {})
@@ -168,7 +174,7 @@ class TinderClient:
             path = f"/v2/matches?locale={self.locale}&count=100&is_tinder_u=false"
             if page_token:
                 path += f"&page_token={page_token}"
-            data = self._request("GET", path).json().get("data", {})
+            data = self._json(self._request("GET", path)).get("data", {})
             matches.extend(data.get("matches", []))
             page_token = data.get("next_page_token")
             if not page_token:
