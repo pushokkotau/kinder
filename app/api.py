@@ -2,10 +2,10 @@ from typing import Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
 
 from app.routers.autoswipe import create_autoswipe_router
 from app.routers.auth import create_auth_router
+from app.routers.location import create_location_router
 from app.routers.profile import create_profile_router
 from app.routers.recommendations import create_recommendations_router
 from app.routers.swipe import create_swipe_router
@@ -30,10 +30,6 @@ sessions = TinderSessionManager()
 web_sessions = WebSessionStateStore()
 web_auth = WebAuthService(sessions, web_sessions)
 app.include_router(create_auth_router(web_auth))
-
-
-class LocationRequest(BaseModel):
-    city: str = Field(min_length=1)
 
 
 def get_session_id(authorization: Optional[str]) -> str:
@@ -90,19 +86,5 @@ def matches_count(services: ClientServices = Depends(get_services)) -> dict[str,
     return {"count": services.matches.get_count()}
 
 
-@app.post("/api/v1/location")
-def set_location(
-    payload: LocationRequest,
-    authorization: Optional[str] = Header(default=None),
-    client: TinderClient = Depends(get_client),
-) -> dict[str, str | float]:
-    services = ServiceFactory.for_client(client)
-    location = services.location.set_city(payload.city)
-    session_id = get_session_id(authorization)
-    web_sessions.set_location(session_id, payload.city, location)
-    return {
-        "city": payload.city,
-        "address": location.address,
-        "latitude": location.latitude,
-        "longitude": location.longitude,
-    }
+
+app.include_router(create_location_router(get_client, get_services, web_sessions))
