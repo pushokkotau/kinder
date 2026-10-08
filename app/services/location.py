@@ -15,11 +15,13 @@ class LocationService:
         self.geolocator = Nominatim(user_agent=user_agent)
 
     def set_city(self, city: str) -> Location:
-        location = self.geolocator.geocode(city)
+        location = self.geolocator.geocode(
+            city,
+            addressdetails=True,
+        )
         if location is None:
-            raise ValueError(f"City not found: {city}")
-        if getattr(location, "raw", {}).get("type") not in {"city", "town", "village", "municipality"}:
-            raise ValueError(f"City not found: {city}")
+            raise ValueError(f"Location not found: {city}")
+
         return self.set_location(location)
 
     def set_location(self, location: GeopyLocation) -> Location:
