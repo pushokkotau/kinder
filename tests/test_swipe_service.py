@@ -1,10 +1,8 @@
+from tests.helpers import recommendation
 from app.services.swipe import SwipeService
 from app.tinder.models import Recommendation, TinderUser
 
 
-def recommendation(user_id, photos, s_number=1):
-    user = TinderUser(id=user_id, name=user_id, photos=photos, raw={"_id": user_id})
-    return Recommendation(user=user, s_number=s_number, raw={})
 
 
 class FakeSwipeClient:
