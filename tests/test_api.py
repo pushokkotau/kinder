@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+import pytest
 
 from app.tinder.client import TinderAPIError
 
@@ -30,17 +31,58 @@ def test_protected_endpoints_require_auth():
     assert response.status_code == 401
 
 
-def test_invalid_session_does_not_create_client():
+@pytest.mark.parametrize(
+    ("method", "path"),
+    [
+        ("get", "/api/v1/profile"),
+        ("get", "/api/v1/matches/count"),
+        ("get", "/api/v1/recommendations"),
+        ("post", "/api/v1/swipes/like/user-1"),
+        ("post", "/api/v1/autoswipe"),
+        ("post", "/api/v1/location"),
+        ("post", "/api/v1/auth/logout"),
+    ],
+)
+def test_protected_endpoints_reject_invalid_session(method, path):
     session_id = "missing-session"
     sessions.remove(session_id)
 
-    response = client.get(
-        "/api/v1/profile",
+    response = getattr(client, method)(
+        path,
         headers={"Authorization": f"Bearer {session_id}"},
     )
 
     assert response.status_code == 401
     assert sessions.find_client(session_id) is None
+
+
+def test_expired_session_is_rejected_by_protected_endpoints(monkeypatch):
+    monkeypatch.setenv("TINDER_API_MODE", "fake")
+    monkeypatch.setattr("app.services.session.time.monotonic", lambda: 100.0)
+
+    token = authenticate()
+    headers = {"Authorization": f"Bearer {token}"}
+
+    monkeypatch.setattr("app.services.session.time.monotonic", lambda: 161.0)
+
+    responses = [
+        client.get("/api/v1/profile", headers=headers),
+        client.get("/api/v1/matches/count", headers=headers),
+        client.get("/api/v1/recommendations", headers=headers),
+        client.post(
+            "/api/v1/swipes/like/user-1",
+            headers=headers,
+        ),
+        client.post("/api/v1/autoswipe", headers=headers),
+        client.post(
+            "/api/v1/location",
+            json={"city": "Amsterdam"},
+            headers=headers,
+        ),
+    ]
+
+    assert [response.status_code for response in responses] == [401] * len(responses)
+    assert sessions.find_client(token) is None
 
 
 def test_frontend_flow_with_fake_api(monkeypatch):
