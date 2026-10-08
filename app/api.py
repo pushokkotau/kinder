@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Optional
 from uuid import uuid4
 
 from fastapi import Depends, FastAPI, Header, HTTPException
@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from app.services.auto_swipe import AutoSwipeService
 from app.services.location import LocationService
 from app.services.matches import MatchService
-from app.services.swipe import SwipeService
+from app.services.web_session import WebSessionStateStore
 from app.services.profile import ProfileService
 from app.services.recommendations import RecommendationService
 from app.services.session import TinderSessionManager
@@ -26,9 +26,7 @@ app.add_middleware(
 )
 
 sessions = TinderSessionManager()
-web_session_cities: dict[str, str] = {}
-web_session_locations: dict[str, Any] = {}
-web_phone_sessions: dict[str, str] = {}
+web_sessions = WebSessionStateStore()
 
 
 class TokenAuthRequest(BaseModel):
@@ -60,12 +58,7 @@ def get_session_id(authorization: Optional[str]) -> str:
 
 def remove_web_session(session_id: str) -> None:
     sessions.remove(session_id)
-    web_session_cities.pop(session_id, None)
-    web_session_locations.pop(session_id, None)
-
-    for phone, mapped_session_id in list(web_phone_sessions.items()):
-        if mapped_session_id == session_id:
-            web_phone_sessions.pop(phone, None)
+    web_sessions.remove(session_id)
 
 
 def get_client(authorization: Optional[str] = Header(default=None)) -> TinderClient:
@@ -81,6 +74,7 @@ def get_client(authorization: Optional[str] = Header(default=None)) -> TinderCli
 def create_web_session() -> tuple[str, TinderClient]:
     session_id = uuid4().hex
     client = sessions.get_client(session_id)
+    web_sessions.create(session_id)
     return session_id, client
 
 
@@ -108,19 +102,19 @@ def request_phone_code(payload: PhoneAuthRequest) -> dict[str, object]:
     except Exception as exc:
         remove_web_session(session_id)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    web_phone_sessions[payload.phone] = session_id
+    web_sessions.bind_phone(payload.phone, session_id)
     return {"session_token": session_id, "code_requested": True}
 
 
 @app.post("/api/v1/auth/phone/verify")
 def verify_phone_code(payload: CodeAuthRequest) -> dict[str, str]:
-    session_id = web_phone_sessions.get(payload.phone)
+    session_id = web_sessions.find_by_phone(payload.phone)
     if session_id is None:
         raise HTTPException(status_code=401, detail="Phone authentication session not found")
 
     client = sessions.find_client(session_id)
     if client is None:
-        web_phone_sessions.pop(payload.phone, None)
+        web_sessions.remove(session_id)
         raise HTTPException(status_code=401, detail="Phone authentication session not found")
 
     try:
@@ -128,7 +122,9 @@ def verify_phone_code(payload: CodeAuthRequest) -> dict[str, str]:
     except Exception as exc:
         raise HTTPException(status_code=401, detail=str(exc)) from exc
 
-    web_phone_sessions.pop(payload.phone, None)
+    state = web_sessions.get(session_id)
+    if state:
+        state.phones.discard(payload.phone)
     return {"session_token": session_id, "tinder_token": token}
 
 
@@ -182,7 +178,8 @@ def autoswipe(
     client: TinderClient = Depends(get_client),
 ) -> dict[str, int | bool]:
     session_id = get_session_id(authorization)
-    city = web_session_cities.get(session_id)
+    state = web_sessions.get(session_id)
+    city = state.city if state else None
     if not city:
         raise HTTPException(
             status_code=400,
@@ -191,7 +188,7 @@ def autoswipe(
 
     result = AutoSwipeService.for_client(client).run(
         city,
-        resolved_location=web_session_locations.get(session_id),
+        resolved_location=state.location if state else None,
     )
 
     return {
@@ -220,8 +217,7 @@ def set_location(
 ) -> dict[str, str | float]:
     location = LocationService(client).set_city(payload.city)
     session_id = get_session_id(authorization)
-    web_session_cities[session_id] = payload.city
-    web_session_locations[session_id] = location
+    web_sessions.set_location(session_id, payload.city, location)
     return {
         "city": payload.city,
         "address": location.address,

@@ -3,9 +3,7 @@ from fastapi.testclient import TestClient
 from app.api import (
     app,
     sessions,
-    web_phone_sessions,
-    web_session_cities,
-    web_session_locations,
+    web_sessions,
 )
 
 
@@ -44,9 +42,7 @@ def test_invalid_session_does_not_create_client():
 
 def test_frontend_flow_with_fake_api(monkeypatch):
     monkeypatch.setenv("TINDER_API_MODE", "fake")
-    web_session_cities.clear()
-    web_session_locations.clear()
-    web_phone_sessions.clear()
+    web_sessions.clear()
 
     token = authenticate()
     headers = {"Authorization": f"Bearer {token}"}
@@ -84,9 +80,7 @@ def test_invalid_swipe_action():
 
 
 def test_autoswipe_reuses_resolved_location(monkeypatch):
-    web_session_cities.clear()
-    web_session_locations.clear()
-    web_phone_sessions.clear()
+    web_sessions.clear()
 
     class FakeLocation:
         address = "Amsterdam"
@@ -130,24 +124,20 @@ def test_autoswipe_reuses_resolved_location(monkeypatch):
 
 
 def test_logout_removes_web_session_state():
-    web_session_cities.clear()
-    web_session_locations.clear()
-    web_phone_sessions.clear()
+    web_sessions.clear()
 
     token = authenticate()
     headers = {"Authorization": f"Bearer {token}"}
-    web_session_cities[token] = "Amsterdam"
-    web_session_locations[token] = object()
-    web_phone_sessions["+31612345678"] = token
+    web_sessions.set_location(token, "Amsterdam", object())
+    web_sessions.bind_phone("+31612345678", token)
 
     response = client.post("/api/v1/auth/logout", headers=headers)
 
     assert response.status_code == 200
     assert response.json() == {"status": "logged_out"}
     assert sessions.find_client(token) is None
-    assert token not in web_session_cities
-    assert token not in web_session_locations
-    assert token not in web_phone_sessions.values()
+    assert web_sessions.get(token) is None
+    assert web_sessions.find_by_phone("+31612345678") is None
 
 
 def test_logout_rejects_unknown_session():
