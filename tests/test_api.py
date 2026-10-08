@@ -187,3 +187,41 @@ def test_phone_auth_maps_tinder_api_error_to_400(monkeypatch):
 
     assert response.status_code == 400
     assert response.json()["detail"] == "invalid phone"
+
+
+def test_auth_rejects_blank_token():
+    response = client.post("/api/v1/auth/token", json={"token": "   "})
+    assert response.status_code == 422
+
+
+def test_auth_rejects_blank_phone():
+    response = client.post("/api/v1/auth/phone", json={"phone": "   "})
+    assert response.status_code == 422
+
+
+def test_location_rejects_blank_city():
+    token = authenticate()
+    response = client.post(
+        "/api/v1/location",
+        json={"city": "   "},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 422
+
+
+def test_location_maps_unknown_city_to_400(monkeypatch):
+    token = authenticate()
+    monkeypatch.setattr(
+        LocationService,
+        "set_city",
+        lambda self, city: (_ for _ in ()).throw(ValueError("City not found: Atlantis")),
+    )
+
+    response = client.post(
+        "/api/v1/location",
+        json={"city": "Atlantis"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "City not found: Atlantis"
