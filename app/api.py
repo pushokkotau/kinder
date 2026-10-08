@@ -165,11 +165,11 @@ def swipe(action: str, user_id: str, client: TinderClient = Depends(get_client))
     if action not in {"like", "dislike"}:
         raise HTTPException(status_code=400, detail="Action must be like or dislike")
 
-    swipe_service = SwipeService(client, recommendation_service=None)
+    swipe_service = SwipeService(client, RecommendationService(client))
     if action == "like":
-        client.like(user_id)
+        swipe_service.like(user_id)
     else:
-        client.dislike(user_id)
+        swipe_service.dislike(user_id)
 
     return {"action": action, "user_id": user_id}
 
