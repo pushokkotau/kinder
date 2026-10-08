@@ -1,7 +1,6 @@
 from aiogram.types import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
-    KeyboardButton,
     ReplyKeyboardMarkup,
 )
 
@@ -22,13 +21,6 @@ def start_keyboard() -> InlineKeyboardMarkup:
                 )
             ],
         ]
-    )
-
-
-def unauthenticated_keyboard() -> ReplyKeyboardMarkup:
-    return ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="Авторизоваться")]],
-        resize_keyboard=True,
     )
 
 
