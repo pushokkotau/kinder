@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 from app.services.auto_swipe import AutoSwipeService
 from app.routers.auth import create_auth_router
+from app.routers.profile import create_profile_router
 from app.services.web_auth import WebAuthService
 from app.services.web_session import WebSessionStateStore
 from app.services.factory import ClientServices, ServiceFactory
@@ -71,10 +72,7 @@ def get_services(client: TinderClient = Depends(get_client)) -> ClientServices:
     return ServiceFactory.for_client(client)
 
 
-@app.get("/api/v1/profile")
-def profile(services: ClientServices = Depends(get_services)) -> dict[str, str]:
-    result = services.profile.get_profile()
-    return {"name": result.name, "city": result.city, "country": result.country}
+app.include_router(create_profile_router(get_services))
 
 
 def serialize_recommendation(recommendation: Recommendation) -> dict[str, object]:
