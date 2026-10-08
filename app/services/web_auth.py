@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from app.services.auth import AuthService
+from app.services.factory import ServiceFactory
 from app.services.session import TinderSessionManager
 from app.services.web_session import WebSessionState, WebSessionStateStore
 from app.tinder.client import TinderAPIError, TinderClient
@@ -26,7 +26,7 @@ class WebAuthService:
     def authenticate_with_token(self, token: str) -> str:
         session_id, client = self.create_web_session()
         try:
-            AuthService(client).authenticate_with_token(token)
+            ServiceFactory.for_client(client).auth.authenticate_with_token(token)
         except (TinderAPIError, ValueError):
             self.remove_session(session_id)
             raise
@@ -35,7 +35,7 @@ class WebAuthService:
     def request_phone_code(self, phone: str) -> str:
         session_id, client = self.create_web_session()
         try:
-            AuthService(client).request_phone_code(phone)
+            ServiceFactory.for_client(client).auth.request_phone_code(phone)
         except (TinderAPIError, ValueError):
             self.remove_session(session_id)
             raise
@@ -53,7 +53,7 @@ class WebAuthService:
             raise TinderAPIError("Phone authentication session not found")
 
         try:
-            token = AuthService(client).authenticate_with_code(phone, code)
+            token = ServiceFactory.for_client(client).auth.authenticate_with_code(phone, code)
         except (TinderAPIError, ValueError):
             raise
 
