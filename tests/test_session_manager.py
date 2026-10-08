@@ -29,3 +29,21 @@ def test_sessions_are_isolated_between_users(monkeypatch):
     second = sessions.get_client(2)
 
     assert first is not second
+
+
+def test_web_session_identifier_is_supported(monkeypatch):
+    monkeypatch.setenv("TINDER_API_MODE", "fake")
+    sessions = TinderSessionManager()
+
+    client = sessions.get_client("web-session")
+    client.authenticate_with_token("test-token")
+
+    assert sessions.find_client("web-session") is client
+    assert sessions.get_authenticated_client("web-session") is client
+
+
+def test_find_client_does_not_create_unknown_session(monkeypatch):
+    monkeypatch.setenv("TINDER_API_MODE", "fake")
+    sessions = TinderSessionManager()
+
+    assert sessions.find_client("missing") is None
