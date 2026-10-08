@@ -5,13 +5,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from app.services.auto_swipe import AutoSwipeService
-from app.services.location import LocationService
-from app.services.matches import MatchService
 from app.services.web_auth import WebAuthService
 from app.services.web_session import WebSessionStateStore
-from app.services.swipe import SwipeService
-from app.services.profile import ProfileService
-from app.services.recommendations import RecommendationService
+from app.services.factory import ClientServices, ServiceFactory
 from app.services.session import TinderSessionManager
 from app.tinder.client import TinderAPIError, TinderClient
 from app.tinder.models import Recommendation
@@ -119,8 +115,13 @@ def logout(authorization: Optional[str] = Header(default=None)) -> dict[str, str
 
 
 @app.get("/api/v1/profile")
-def profile(client: TinderClient = Depends(get_client)) -> dict[str, str]:
-    result = ProfileService(client).get_profile()
+def get_services(client: TinderClient = Depends(get_client)) -> ClientServices:
+    return ServiceFactory.for_client(client)
+
+
+@app.get("/api/v1/profile")
+def profile(services: ClientServices = Depends(get_services)) -> dict[str, str]:
+    result = services.profile.get_profile()
     return {"name": result.name, "city": result.city, "country": result.country}
 
 
@@ -134,21 +135,20 @@ def serialize_recommendation(recommendation: Recommendation) -> dict[str, object
 
 
 @app.get("/api/v1/recommendations")
-def recommendations(client: TinderClient = Depends(get_client)) -> dict[str, list[dict[str, object]]]:
-    items = RecommendationService(client).get_batch()
+def recommendations(services: ClientServices = Depends(get_services)) -> dict[str, list[dict[str, object]]]:
+    items = services.recommendations.get_batch()
     return {"recommendations": [serialize_recommendation(item) for item in items]}
 
 
 @app.post("/api/v1/swipes/{action}/{user_id}")
-def swipe(action: str, user_id: str, client: TinderClient = Depends(get_client)) -> dict[str, str]:
+def swipe(action: str, user_id: str, services: ClientServices = Depends(get_services)) -> dict[str, str]:
     if action not in {"like", "dislike"}:
         raise HTTPException(status_code=400, detail="Action must be like or dislike")
 
-    swipe_service = SwipeService(client, RecommendationService(client))
     if action == "like":
-        swipe_service.like(user_id)
+        services.swipe.like(user_id)
     else:
-        swipe_service.dislike(user_id)
+        services.swipe.dislike(user_id)
 
     return {"action": action, "user_id": user_id}
 
@@ -186,8 +186,8 @@ def autoswipe(
 
 
 @app.get("/api/v1/matches/count")
-def matches_count(client: TinderClient = Depends(get_client)) -> dict[str, int]:
-    return {"count": MatchService(client).get_count()}
+def matches_count(services: ClientServices = Depends(get_services)) -> dict[str, int]:
+    return {"count": services.matches.get_count()}
 
 
 @app.post("/api/v1/location")
@@ -196,7 +196,8 @@ def set_location(
     authorization: Optional[str] = Header(default=None),
     client: TinderClient = Depends(get_client),
 ) -> dict[str, str | float]:
-    location = LocationService(client).set_city(payload.city)
+    services = ServiceFactory.for_client(client)
+    location = services.location.set_city(payload.city)
     session_id = get_session_id(authorization)
     web_sessions.set_location(session_id, payload.city, location)
     return {
