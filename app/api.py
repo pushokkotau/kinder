@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from app.services.auto_swipe import AutoSwipeService
+from app.routers.auth import create_auth_router
 from app.services.web_auth import WebAuthService
 from app.services.web_session import WebSessionStateStore
 from app.services.factory import ClientServices, ServiceFactory
@@ -26,19 +27,7 @@ app.add_middleware(
 sessions = TinderSessionManager()
 web_sessions = WebSessionStateStore()
 web_auth = WebAuthService(sessions, web_sessions)
-
-
-class TokenAuthRequest(BaseModel):
-    token: str = Field(min_length=1)
-
-
-class PhoneAuthRequest(BaseModel):
-    phone: str = Field(min_length=1)
-
-
-class CodeAuthRequest(BaseModel):
-    phone: str = Field(min_length=1)
-    code: str = Field(min_length=1)
+app.include_router(create_auth_router(web_auth))
 
 
 class LocationRequest(BaseModel):
@@ -76,42 +65,6 @@ def get_client(authorization: Optional[str] = Header(default=None)) -> TinderCli
 def health() -> dict[str, str]:
     return {"status": "ok"}
 
-
-@app.post("/api/v1/auth/token")
-def authenticate_with_token(payload: TokenAuthRequest) -> dict[str, str]:
-    try:
-        session_id = web_auth.authenticate_with_token(payload.token)
-    except (TinderAPIError, ValueError) as exc:
-        raise HTTPException(status_code=401, detail=str(exc)) from exc
-    return {"session_token": session_id}
-
-
-@app.post("/api/v1/auth/phone")
-def request_phone_code(payload: PhoneAuthRequest) -> dict[str, object]:
-    try:
-        session_id = web_auth.request_phone_code(payload.phone)
-    except (TinderAPIError, ValueError) as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return {"session_token": session_id, "code_requested": True}
-
-
-@app.post("/api/v1/auth/phone/verify")
-def verify_phone_code(payload: CodeAuthRequest) -> dict[str, str]:
-    try:
-        session_id, token = web_auth.verify_phone_code(payload.phone, payload.code)
-    except (TinderAPIError, ValueError) as exc:
-        raise HTTPException(status_code=401, detail=str(exc)) from exc
-    return {"session_token": session_id, "tinder_token": token}
-
-
-@app.post("/api/v1/auth/logout")
-def logout(authorization: Optional[str] = Header(default=None)) -> dict[str, str]:
-    session_id = get_session_id(authorization)
-    try:
-        web_auth.logout(session_id)
-    except TinderAPIError as exc:
-        raise HTTPException(status_code=401, detail=str(exc)) from exc
-    return {"status": "logged_out"}
 
 
 def get_services(client: TinderClient = Depends(get_client)) -> ClientServices:
